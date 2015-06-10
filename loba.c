@@ -15,7 +15,7 @@ struct zoltan_args
 static int obj_count (struct zoltan_args *args, int *ierr)
 {
   *ierr = ZOLTAN_OK;
-
+  
   return args->n > 0 ? args->n : 1;
 }
 
@@ -25,12 +25,11 @@ static void obj_list (struct zoltan_args *args, int num_gid_entries, int num_lid
 {
   int i;
   
-  for (i = 0; args->n; i ++)
+  for (i = 0; i < args->n; i ++)
   {
     global_ids [i * num_gid_entries] = args->id[i];
     local_ids [i * num_lid_entries] = i;
     obj_wgts [i * wgt_dim] = 1.0;
-    i ++;
   }
 
   if (i == 0) /* XXX: Zoltan workaround */
@@ -124,17 +123,14 @@ struct loba* loba_create (enum algo al)
 }
 
 /* balance points up to tolerance; output migration ranks */
-void loba_balance (struct loba *lb, int n, REAL *p[3], unsigned int *id, REAL tol, int *rank)
+void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id, REAL tol, int *rank)
 {
   switch (lb->al)
   {
   case ZOLTAN_RCB:
-  case ZOLTAN_RIB:
   {
-    
     struct zoltan_args args = {n, {p[0], p[1], p[2]}, id};
-
-    printf("exectuted1");
+    
     /* callbacks */
     Zoltan_Set_Fn (lb->zoltan, ZOLTAN_NUM_OBJ_FN_TYPE, (void (*)()) obj_count, &args);
     Zoltan_Set_Fn (lb->zoltan, ZOLTAN_OBJ_LIST_FN_TYPE, (void (*)()) obj_list, &args);
@@ -154,7 +150,7 @@ void loba_balance (struct loba *lb, int n, REAL *p[3], unsigned int *id, REAL to
 	    &num_import, &import_global_ids, &import_local_ids, &import_procs,
 	    &num_export, &export_global_ids, &export_local_ids, &export_procs) == ZOLTAN_OK, "Zoltan load balancing failed");
 
-    int myrank, i;
+    unsigned int myrank, i;
     MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
     for (i = 0; i < n; i ++) rank[i] = myrank;
     for (i = 0; i < num_export; i ++) rank[export_local_ids[i]] = export_procs[i];
@@ -162,6 +158,9 @@ void loba_balance (struct loba *lb, int n, REAL *p[3], unsigned int *id, REAL to
     Zoltan_LB_Free_Data (&import_global_ids, &import_local_ids, &import_procs, &export_global_ids, &export_local_ids, &export_procs);
   }
   break;
+  case ZOLTAN_RIB:
+  {
+  }
   }
 }
 
@@ -171,9 +170,13 @@ void loba_query (struct loba *lb, int node, REAL lo[3], REAL hi[3], int *nranks,
   switch (lb->al)
   {
     case ZOLTAN_RCB:
-    case ZOLTAN_RIB:
+    {
       Zoltan_LB_Box_Assign (lb->zoltan, lo[0], lo[1], lo[2], hi[0], hi[1], hi[2], ranks, nranks);
       break;
+    }
+    case ZOLTAN_RIB:
+    {
+    }
   }
 }
 

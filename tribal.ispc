@@ -1,6 +1,4 @@
-export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL hi[3],
-     uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3],
-     uniform unsigned int tid[])
+export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3], uniform unsigned int tid[])
 {
   struct RNGState state;
 
@@ -94,4 +92,5 @@ export void integrate_triangles (uniform REAL step, uniform REAL lo[3], uniform 
     if (t[2][1][i] > hi[1]) v[1][i] *= -1;
     if (t[2][2][i] > hi[2]) v[2][i] *= -1;
   }
+
 }

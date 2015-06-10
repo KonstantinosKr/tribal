@@ -8,7 +8,7 @@ else
 endif
 
 ifeq ($(DEBUG),yes)
-  CFLAGS=-Iobjs/ -g -m64 $(REAL) -DDEBUG $(ZOLTANINC) -Wall
+  CFLAGS=-Iobjs/ -g -m64 $(REAL) -DDEBUG $(ZOLTANINC)
   ISPC=ispc -g --arch=x86-64 $(REAL) -DDEBUG
 else
   CFLAGS=-Iobjs/ -O2 -m64 $(REAL) $(ZOLTANINC)

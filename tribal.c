@@ -5,6 +5,7 @@
 #include "loba.h"
 #include "error.h"
 #include "tribal_ispc.h"
+#include "contact.h"
 
 /* migrate triangles "in-place" to new ranks */
 static void migrate_triangles (int size, int nt, REAL *t[3][3], REAL *v[3], int *rank)
@@ -84,7 +85,6 @@ unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
     return nt;
 }
 
-
 void write_pointsVTK(unsigned int nt, REAL *t[3][3], REAL *v[3])
 {
     FILE *fp = fopen("output.vtk", "w+");
@@ -113,11 +113,14 @@ int main (int argc, char **argv)
 {
   REAL *t[3][3]; /* triangles */
   REAL *v[3]; /* velocities */
+  REAL **d;
+  REAL *p[3],*q[3];
   unsigned int *tid; /* triangle identifiers */
   REAL lo[3] = {0, 0, 0}; /* lower corner */
   REAL hi[3] = {1, 1, 1}; /* upper corner */
   unsigned int nt; /* number of triangles */
   int *rank; /* migration ranks */
+  unsigned int *pid; /*particle identifier */
   unsigned int size; /* buffers size */
   int i;
   int myrank;
@@ -131,28 +134,33 @@ int main (int argc, char **argv)
   {
     /* set nt */
     if (argc > 1) nt = atoi (argv[1]);
-    else nt = 10000;
+    else nt = 10;
 
     /* buffers */
     size = 4*nt;
 
-#if 1
     for (i = 0; i < 3; i ++)
     {
       ERRMEM (t[0][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[1][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[2][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (v[i] = (REAL *) malloc (sizeof(REAL[size])));
+    
+      ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
+      ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
+    }
+    ERRMEM (d = (REAL **) malloc (nt * sizeof(REAL *)));
+    for(unsigned int j=0;j<nt;j++)
+    {
+      ERRMEM (d[j] = (REAL *) malloc (nt * sizeof(REAL)));
     }
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-
-//    nt = load_pointsVTK(t, tid); 
-//    write_pointsVTK(nt, t, v);
+    ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     
+    //nt = load_pointsVTK(t, tid); 
     /* generate triangles and velocities */
     generate_triangles_and_velocities (lo, hi, nt, t, v, tid); 
-#endif
   }
   else
   {
@@ -163,21 +171,47 @@ int main (int argc, char **argv)
     if (argc > 1) size = atoi (argv[1])*4;
     else size = 10000*4;
 
-#if 1
     for (i = 0; i < 3; i ++)
     {
       ERRMEM (t[0][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[1][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[2][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (v[i] = (REAL *) malloc (sizeof(REAL[size])));
+      
+      ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
+      ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
+    }
+    ERRMEM (d = (REAL **) malloc (nt * sizeof(REAL *)));
+    for(unsigned int j=0;j<nt;j++)
+    {
+      ERRMEM (d[j] = (REAL *) malloc (nt * sizeof(REAL)));
     }
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-    
-    /* generate triangles and velocities */  
-    generate_triangles_and_velocities (lo, hi, nt, t, v, tid);
-#endif
+    ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
   }
+ 
+  if(myrank == 0)
+  {
+    for(i=0;i<nt;i++)
+    {
+      for(unsigned int j=0; j<nt;j++)
+      {
+        d[i][j] = j;
+      }
+    }
+   
+    for(i=0;i<nt;i++)
+    {
+      printf("Master[%d]: ", i);
+      for(unsigned int j=0; j<nt;j++)
+      {
+        printf("slave[%d]=%f | ", j, d[i][j]);
+      }
+      printf("\n");
+    }
+  }
+  
   /* create load balancer */
   struct loba *lb = loba_create (ZOLTAN_RCB);
 
@@ -187,13 +221,18 @@ int main (int argc, char **argv)
   //for (time = 0.0; time < 1.0; time += step)
   {
     loba_balance (lb, nt, t[0], tid, 1.1, rank);
+    
+    for (unsigned int j = 0; j < nt; j++) printf ("rank[%u] = %d\n", j, rank[j]);
+    
+    printf("ORIGIN - A0:%f, A1:%f, A2:%f\n", t[0][0][0], t[0][1][0], t[0][2][0]);
+    contact_distance(nt, t, p, q, d); 
 
     //migrate_triangles (size, nt, t, v, rank);
 
     //integrate_triangles (step, lo, hi, nt, t, v);
   }
-
-  //write_pointsVTK(nt, t, v);
+ 
+  //if(myrank == 0) write_pointsVTK(nt, t, v);
   /* finalise */
   loba_destroy (lb);
 
