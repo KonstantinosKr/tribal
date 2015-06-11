@@ -7,12 +7,6 @@
 #include "tribal_ispc.h"
 #include "contact.h"
 
-/* migrate triangles "in-place" to new ranks */
-static void migrate_triangles (int size, int nt, REAL *t[3][3], REAL *v[3], int *rank)
-{
-  /* TODO */
-}
-
 unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
 {
     FILE *fp1 = fopen("input1.vtk", "r");
@@ -109,11 +103,149 @@ void write_pointsVTK(unsigned int nt, REAL *t[3][3], REAL *v[3])
     fclose(fp);
 }
 
+void migrate_status(int myrank, unsigned int nt, REAL *t[3][3], unsigned int timesteps, unsigned int *importn, unsigned int *exportn)
+{   
+  //sort 
+
+  if(myrank != 0)
+  {
+    //MPI_send();
+    //MPI_send();
+    //MPI_send();
+  
+  
+  
+  } else if(myrank == 0)
+  {
+    //MPI_receive();
+    //MPI_receive();
+
+    unsigned int **nparticles, **import, **export;
+    ERRMEM (nparticle = (unsigned int **) malloc(timesteps * sizeof(unsigned int *)));
+    ERRMEM (import = (unsigned int **) malloc(timesteps * sizeof(unsigned int *)));
+    ERRMEM (export = (unsigned int **) malloc(timesteps * sizeof(unsigned int *)));
+    
+    for(unsigned int i=0;i<nt;i++)
+    {
+      ERRMEM (nparticles[i] = (unsigned int *) malloc(nt * sizeof(REAL))); 
+      ERRMEM (import[i] = (unsigned int *) malloc(nt * sizeof(REAL)));
+      ERRMEM (export[i] = (unsigned int *) malloc(nt * sizeof(REAL)));
+    }
+
+    int nnodes;
+    MPI_Comm_size(MPI_COMM_WORLD, &nnodes);
+  
+    FILE *fp = fopen("mpi.csv", "w+");
+    
+    for(int i=0;i<nnodes;i++)
+    {
+      fprintf(fp,"npar_node[%u], imp_dep[%u], exp_dep[%u]", i,i,i);
+      if(i!=nnodes-1)
+      {
+        fprintf(fp,", ");
+      }
+    }
+    fprintf(fp,"\n");
+  
+    //replace with time/step for all timesteps
+    for(unsigned int i=0;i<timesteps;i++)
+    { 
+      for(int j=0;j<nnodes;i++)
+      {
+        fprintf(fp,"%u, %u, %u", npar[j][i], import_dependencies[j][i], export_dependencies[j][i]);
+      }
+      if(i!=timesteps-1)
+      {
+        fprintf(fp,", ");
+      }else
+      {
+        fprintf(fp,"\n");
+      }
+
+    } 
+    fclose(fp);
+  }
+}
+
+/* migrate triangles "in-place" to new ranks */
+static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, REAL *t[3][3], REAL *v[3], int *rank, unsigned int *importn, unsigned int *exportn)
+{
+  *importn=0;
+  *exportn=0;
+  
+  int nnodes;
+  MPI_Comm_size(MPI_COMM_WORLD, &nnodes);
+  
+  unsigned int **send_idx, *pivot; REAL **tbuffer[3][3], **vbuffer[3];
+
+  ERRMEM (tbuffer = (REAL **) malloc(nnodes*sizeof(REAL*)));
+  ERRMEM (vbuffer = (REAL **) malloc(nnodes*sizeof(REAL*)));
+  ERRMEM (send_idx = (unsigned int **) malloc(nnodes*sizeof(unsigned int*)));
+  ERRMEM (pivot = (unsigned int *) malloc(nnodes*sizeof(unsigned int)));
+  for(int i=0;i<nnodes;i++)
+  {
+    ERRMEM (tbuffer[i] = (REAL *) malloc(nt*sizeof(REAL*)));
+    ERRMEM (vbuffer[i] = (REAL *) malloc(nt*sizeof(REAL*)));
+    pivot[i] = 0;
+    ERRMEM (send_idx[i] = (unsigned int *) malloc(nt*sizeof(unsigned int)));
+  }
+  
+  for (unsigned int i = 0; i < nt; i++) 
+  {
+    send_idx[pivot[rank[i]]++][rank[i]] = i; 
+  }
+
+  for(int i=0;i<nnodes;i++)
+  {
+    for(unsigned int j=0;j<pivot[i];j++)
+    {
+      for(int k=0;k<3;k++)
+      {
+        tbuffer[0][k][send_idx[j][i]][i] = t[0][k][send_idx[j][i]]; 
+        tbuffer[1][k][send_idx[j][i]][i] = t[1][k][send_idx[j][i]];
+        tbuffer[2][k][send_idx[j][i]][i] = t[2][k][send_idx[j][i]];
+
+        vbuffer[k][send_idx[j][i]][i] = v[k][send_idx[j][i]];
+      }
+    }
+  
+    //store number of exports
+    if(i != myrank)
+    {
+      *exportn += pivot[i];
+    }
+  }//can merge to next loop if correct since <nnodes limit;
+
+  nt = nt - *exportn;
+
+  unsigned int *pivot_buffer;
+  ERRMEM (pivot_buffer = (unsigned int *) malloc(nnodes*sizeof(unsigned int)));
+  pivot_buffer = pivot;
+
+  MPI_Status status;
+
+  //send buffers
+  for(int i=0;i<nnodes;i++)
+  {
+    //MPI_send(&pivot[i], pivot[i], MPI_INT, i, myrank, MPI_COMM_WORLD);
+    //MPI_send(&tbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD);
+    //MPI_send(&vbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD);
+
+    MPI_Sendrecv(&pivot_buffer[i], pivot[i], MPI_INT, i, myrank, MPI_COMM_WORLD, &pivot_buffer[i], pivot[i], MPI_INT, i, myrank, MPI_COMM_WORLD, &status);
+    
+    *importn += pivot[myrank];
+    
+    MPI_Sendrecv(&tbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &tbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &status);
+    MPI_Sendrecv(&vbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &vbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &status);  
+  }
+  nt = nt + *importn;  
+}
+
 int main (int argc, char **argv)
 {
   REAL *t[3][3]; /* triangles */
   REAL *v[3]; /* velocities */
-  REAL **d;
+  REAL **d; /*distance */
   REAL *p[3],*q[3];
   unsigned int *tid; /* triangle identifiers */
   REAL lo[3] = {0, 0, 0}; /* lower corner */
@@ -122,9 +254,11 @@ int main (int argc, char **argv)
   int *rank; /* migration ranks */
   unsigned int *pid; /*particle identifier */
   unsigned int size; /* buffers size */
-  int i;
   int myrank;
-
+  
+  /*load balancing n dependencies */
+  unsigned int *importn, *exportn;
+  
   /* init */ 
   MPI_Init (&argc, &argv);
 
@@ -139,7 +273,7 @@ int main (int argc, char **argv)
     /* buffers */
     size = 4*nt;
 
-    for (i = 0; i < 3; i ++)
+    for (int i = 0; i < 3; i ++)
     {
       ERRMEM (t[0][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[1][i] = (REAL *) malloc (sizeof(REAL[size])));
@@ -157,7 +291,8 @@ int main (int argc, char **argv)
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-    
+    ERRMEM (importn = (unsigned int *) malloc(sizeof(unsigned int[size])));
+    ERRMEM (exportn = (unsigned int *) malloc(sizeof(unsigned int[size])));
     //nt = load_pointsVTK(t, tid); 
     /* generate triangles and velocities */
     generate_triangles_and_velocities (lo, hi, nt, t, v, tid); 
@@ -169,9 +304,9 @@ int main (int argc, char **argv)
 
     /* buffers */
     if (argc > 1) size = atoi (argv[1])*4;
-    else size = 10000*4;
+    else size = 10*4;
 
-    for (i = 0; i < 3; i ++)
+    for (int i = 0; i < 3; i ++)
     {
       ERRMEM (t[0][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[1][i] = (REAL *) malloc (sizeof(REAL[size])));
@@ -186,62 +321,53 @@ int main (int argc, char **argv)
     {
       ERRMEM (d[j] = (REAL *) malloc (nt * sizeof(REAL)));
     }
+    ERRMEM (importn = (unsigned int *) malloc(sizeof(unsigned int[size])));
+    ERRMEM (exportn = (unsigned int *) malloc(sizeof(unsigned int[size])));
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-  }
- 
-  if(myrank == 0)
-  {
-    for(i=0;i<nt;i++)
-    {
-      for(unsigned int j=0; j<nt;j++)
-      {
-        d[i][j] = j;
-      }
-    }
-   
-    for(i=0;i<nt;i++)
-    {
-      printf("Master[%d]: ", i);
-      for(unsigned int j=0; j<nt;j++)
-      {
-        printf("slave[%d]=%f | ", j, d[i][j]);
-      }
-      printf("\n");
-    }
   }
   
   /* create load balancer */
   struct loba *lb = loba_create (ZOLTAN_RCB);
 
   /* perform time stepping */
-  REAL step = 1E-3, time;
+  REAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
   {
     loba_balance (lb, nt, t[0], tid, 1.1, rank);
     
-    for (unsigned int j = 0; j < nt; j++) printf ("rank[%u] = %d\n", j, rank[j]);
+    for (unsigned int j = 0; j < nt; j++) 
+    {
+      printf ("rank[%u] = %d\n", j, rank[j]);
+    }
     
-    printf("ORIGIN - A0:%f, A1:%f, A2:%f\n", t[0][0][0], t[0][1][0], t[0][2][0]);
+    migrate_triangles (myrank, size, nt, t, v, rank, &importn[timesteps], &exporn[timesteps]);
+
     contact_distance(nt, t, p, q, d); 
 
-    //migrate_triangles (size, nt, t, v, rank);
-
     //integrate_triangles (step, lo, hi, nt, t, v);
+    timesteps++;
   }
- 
-  //if(myrank == 0) write_pointsVTK(nt, t, v);
+  
+  if(myrank == 0)
+  {
+    migrate_status(myrank, nt, t, timesteps, import, export);
+    //write_pointsVTK(nt, t, v);
+  }
+
   /* finalise */
   loba_destroy (lb);
 
-  for (i = 0; i < 3; i ++)
+  for (int i = 0; i < 3; i ++)
   {
     free (t[0][i]);
     free (t[1][i]);
     free (t[2][i]);
     free (v[i]);
+    free (p[i]);
+    free (q[i]);
   }
   free (rank);
 
