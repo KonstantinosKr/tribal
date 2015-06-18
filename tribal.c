@@ -187,6 +187,7 @@ void migrate_status(int myrank, unsigned int nt, REAL *t[3][3], unsigned int tim
 static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, REAL *t[3][3], REAL *v[3], int *rank, int num_gid_entries, int num_lid_entries, 
                                 int num_import, int *import_procs, int num_export, int *export_procs, unsigned int *export_local_id) 
 {
+  /*
   int nproc;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
@@ -239,7 +240,9 @@ static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, R
       for(int k=0;k<3;k++)
       {
         tbuffer[0][k][i][j] = t[0][k][send_idx[i][j]];  
+        
         tbuffer[1][k][i][j] = t[1][k][send_idx[i][j]]; 
+        
         tbuffer[2][k][i][j] = t[2][k][send_idx[i][j]]; 
         
         vbuffer[k][i][j] = v[k][send_idx[i][j]];
@@ -279,6 +282,106 @@ static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, R
    // MPI_Sendrecv(&pivot_buffer[0], 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &pivot_buffer[0], 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); 
    // MPI_Sendrecv(&tbuffer[0], pivot[0], MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &tbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
    // MPI_Sendrecv(&vbuffer[0], pivot[0], MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &vbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);  
+*/
+
+  int nproc;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  if(nt>0)
+  for (unsigned int i = 0; i < num_export; i++) 
+  {
+    printf("export_id:%i\n", export_local_id[i]);   
+  }
+  
+  int **send_idx, *pivot; 
+  REAL *tbuffer[3], *vbuffer;
+  tbuffer[0] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  tbuffer[1] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  tbuffer[2] = (REAL *) malloc(nproc*size*3*sizeof(REAL)); 
+  vbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL)); 
+  
+  send_idx = (int **) malloc(nproc*sizeof(int*));
+  pivot = (int *) malloc(nproc*sizeof(int));
+  for(int i=0;i<nproc;i++)
+  {
+    pivot[i] = 0;
+    send_idx[i] = (int *) malloc(size*sizeof(int));
+  }
+
+  
+  if(nt>0)
+  for (unsigned int i = 0; i < num_export; i++) 
+  {
+    send_idx[rank[export_local_id[i]]][pivot[rank[export_local_id[i]]]] = export_local_id[i];
+    pivot[rank[export_local_id[i]]]++;
+  }
+  
+  int *pivot_buffer = (int *) malloc(nproc*sizeof(int));
+  
+  if(nt>0)
+  for(int i=0;i<nproc;i++)
+  {
+    pivot_buffer[i] = pivot[i];
+    for(unsigned int j=0;j<pivot[i];j++)
+    {
+      for(int k=0;k<3;k++)
+      {
+        tbuffer[0][(i*nproc*pivot[i]*3)+j+(k+1)] = t[0][k][send_idx[i][j]];  
+        
+        tbuffer[1][(i*nproc*pivot[i]*3)+j+(k+1)] = t[1][k][send_idx[i][j]]; 
+        
+        tbuffer[2][(i*nproc*pivot[i]*3)+j+(k+1)] = t[2][k][send_idx[i][j]]; 
+        
+        vbuffer[(i*nproc*pivot[i]*3)+j+(k+1)] = v[k][send_idx[i][j]];
+      }
+    }
+  }
+ 
+  //test  
+  if(myrank==0)
+  {
+  //printf("velocity1Origin:%f\n", v[0][send_idx[1][0]]);
+  //printf("velocity1:%f\n", vbuffer[(1*nproc*pivot[1]*3)+0+(0+1)]);
+  //printf("t0Origin:%f\n", t[0][0][send_idx[1][0]]);  
+  //printf("t0:%f\n", tbuffer[0][(1*nproc*pivot[1]*3)+0+(0+1)]);
+  }
+
+  //send buffers loop through procs is not correct, should loop through procs that need to send something/same for receive.(send has the pivot check*)
+  for(int i=0;i<nproc;i++)
+  {
+    if(myrank != i && pivot[i] > 0)
+    {  
+      MPI_Send(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+      MPI_Send(&tbuffer[0][(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
+      MPI_Send(&tbuffer[1][(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
+      MPI_Send(&tbuffer[2][(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD);
+      for(int x=0;x<pivot[i];x++)
+      {
+        printf("sent-tbuffer: %f\n", tbuffer[0][(i*nproc*pivot[i]*3)+x+(0+1)]);
+      }
+      MPI_Send(&vbuffer[(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
+    }     
+  }
+
+  for(int i=0;i<nproc;i++)
+  {
+    if(myrank != i && myrank != 0)
+    {
+      MPI_Recv(&pivot_buffer[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&tbuffer[0][(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&tbuffer[1][(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&tbuffer[2][(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int x=0;x<pivot_buffer[i];x++)
+      {
+        printf("received-tbuffer: %f\n", tbuffer[0][(i*nproc*pivot_buffer[i]*3)+x+(0+1)]);
+      }
+      MPI_Recv(&vbuffer[(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+  }
+   // MPI_Sendrecv(&pivot_buffer[0], 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &pivot_buffer[0], 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); 
+   // MPI_Sendrecv(&tbuffer[0], pivot[0], MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &tbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
+   // MPI_Sendrecv(&vbuffer[0], pivot[0], MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &vbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);  
+
 }
 
 int main (int argc, char **argv)
