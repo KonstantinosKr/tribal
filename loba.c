@@ -6,7 +6,7 @@
 
 struct zoltan_args
 {
-  int n;
+  unsigned int n;
   REAL *p[3];
   unsigned int *id;
 };
@@ -99,7 +99,8 @@ struct loba* loba_create (enum algo al)
     Zoltan_Set_Param (lb->zoltan, "LB_METHOD", "RCB");
     Zoltan_Set_Param (lb->zoltan, "IMBALANCE_TOL", "1.3");
     Zoltan_Set_Param (lb->zoltan, "AUTO_MIGRATE", "FALSE");
-    Zoltan_Set_Param (lb->zoltan, "RETURN_LISTS", "EXPORT");
+    Zoltan_Set_Param (lb->zoltan, "RETURN_LISTS", "IMPORT AND EXPORT");
+    //Zoltan_Set_Param (lb->zoltan, "RETURN_LISTS", "IMPORT");
 
     /* RCB parameters */
     Zoltan_Set_Param (lb->zoltan, "RCB_OVERALLOC", "1.3");
@@ -123,7 +124,9 @@ struct loba* loba_create (enum algo al)
 }
 
 /* balance points up to tolerance; output migration ranks */
-void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id, REAL tol, int *rank)
+void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id, REAL tol, int *rank, 
+                    int *num_gid_entries, int *num_lid_entries, int *num_import, int *import_procs, int *num_export, int *export_procs, 
+                    unsigned int *export_local_id) 
 {
   switch (lb->al)
   {
@@ -142,20 +145,29 @@ void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id
     snprintf (str, 128, "%g", tol);
     Zoltan_Set_Param (lb->zoltan, "IMBALANCE_TOL", str);
     
-    int changes, num_gid_entries, num_lid_entries, num_import, *import_procs, num_export, *export_procs;
+    int changes; //num_gid_entries, num_lid_entries, num_import, *import_procs, num_export, *export_procs;
     ZOLTAN_ID_PTR import_global_ids, import_local_ids, export_global_ids, export_local_ids;
-
+    
     /* update partitioning */
-    ASSERT (Zoltan_LB_Balance (lb->zoltan, &changes, &num_gid_entries, &num_lid_entries,
-	    &num_import, &import_global_ids, &import_local_ids, &import_procs,
-	    &num_export, &export_global_ids, &export_local_ids, &export_procs) == ZOLTAN_OK, "Zoltan load balancing failed");
+    ASSERT (Zoltan_LB_Balance (lb->zoltan, &changes, num_gid_entries, num_lid_entries,
+	    num_import, &import_global_ids, &import_local_ids, &import_procs,
+	    num_export, &export_global_ids, &export_local_ids, &export_procs) == ZOLTAN_OK, "Zoltan load balancing failed");
 
-    unsigned int myrank, i;
+    unsigned int myrank;
     MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
-    for (i = 0; i < n; i ++) rank[i] = myrank;
-    for (i = 0; i < num_export; i ++) rank[export_local_ids[i]] = export_procs[i];
-
-    Zoltan_LB_Free_Data (&import_global_ids, &import_local_ids, &import_procs, &export_global_ids, &export_local_ids, &export_procs);
+    
+    for (int i = 0; i < n; i ++) rank[i] = myrank;
+    for (int i = 0; i < *num_export; i++) 
+    {
+      rank[export_local_ids[i]] = export_procs[i];
+      //load to transfer
+      export_local_id[i] = export_local_ids[i];
+    }
+   
+    printf("RANK[%i]:num_import:%d\n", myrank, *num_import);
+    printf("RANK[%i]:num_export:%d\n", myrank, *num_export);
+    
+    //Zoltan_LB_Free_Data (&import_global_ids, &import_local_ids, &import_procs, &export_global_ids, &export_local_ids, &export_procs);
   }
   break;
   case ZOLTAN_RIB:

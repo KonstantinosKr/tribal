@@ -103,142 +103,182 @@ void write_pointsVTK(unsigned int nt, REAL *t[3][3], REAL *v[3])
     fclose(fp);
 }
 
-void migrate_status(int myrank, unsigned int nt, REAL *t[3][3], unsigned int timesteps, unsigned int *importn, unsigned int *exportn)
+void migrate_status(int myrank, unsigned int nt, REAL *t[3][3], unsigned int timesteps, int num_gid_entries, int num_lid_entries, int num_import, int *import_procs, int num_export, int *export_procs, unsigned int *export_local_id) 
 {   
-  //sort 
-
   if(myrank != 0)
   {
-    //MPI_send();
-    //MPI_send();
-    //MPI_send();
-  
-  
-  
+    //send import and export to rank0   
+    MPI_Send(&num_import, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&num_export, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); 
+    MPI_Send(&nt, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
   } else if(myrank == 0)
   {
-    //MPI_receive();
-    //MPI_receive();
-
-    unsigned int **nparticles, **import, **export;
-    ERRMEM (nparticle = (unsigned int **) malloc(timesteps * sizeof(unsigned int *)));
-    ERRMEM (import = (unsigned int **) malloc(timesteps * sizeof(unsigned int *)));
-    ERRMEM (export = (unsigned int **) malloc(timesteps * sizeof(unsigned int *)));
-    
-    for(unsigned int i=0;i<nt;i++)
+    int **nparticle, **import, **export;
+    ERRMEM (nparticle = (int **) malloc(timesteps * sizeof(int *)));
+    ERRMEM (import = (int **) malloc(timesteps * sizeof(int *)));
+    ERRMEM (export = (int **) malloc(timesteps * sizeof(int *)));
+        
+    for(unsigned int i=0;i<timesteps;i++)
     {
-      ERRMEM (nparticles[i] = (unsigned int *) malloc(nt * sizeof(REAL))); 
-      ERRMEM (import[i] = (unsigned int *) malloc(nt * sizeof(REAL)));
-      ERRMEM (export[i] = (unsigned int *) malloc(nt * sizeof(REAL)));
+      ERRMEM (nparticle[i] = (int *) malloc(num_lid_entries * sizeof(REAL))); 
+      ERRMEM (import[i] = (int *) malloc(num_lid_entries * sizeof(REAL)));
+      ERRMEM (export[i] = (int *) malloc(num_lid_entries * sizeof(REAL)));
     }
-
+    
     int nnodes;
     MPI_Comm_size(MPI_COMM_WORLD, &nnodes);
+    for(unsigned int i=0;i<timesteps;i++)
+    {
+      for(int j=0;j<nnodes;j++)
+      {
+        if(j != 0)
+        {
+          int rank_import, rank_export, nn;
+          //receive import and export;
+          MPI_Recv(&rank_import, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+          MPI_Recv(&rank_export, 1, MPI_INT, j, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+          MPI_Recv(&nn, 1, MPI_INT, j, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+          nparticle[i][j] = nn;
+          import[i][j] = rank_import;
+          export[i][j] = rank_export;
+        }
+        else
+        {
+          nparticle[i][j] = nt;
+          import[i][j] = num_import;
+          export[i][j] = num_export;
+        }
+      }
+    }
   
     FILE *fp = fopen("mpi.csv", "w+");
     
     for(int i=0;i<nnodes;i++)
     {
-      fprintf(fp,"npar_node[%u], imp_dep[%u], exp_dep[%u]", i,i,i);
+      fprintf(fp,"ID, nt[%u], imp[%u], exp[%u]", i, i, i);
       if(i!=nnodes-1)
       {
         fprintf(fp,", ");
       }
     }
     fprintf(fp,"\n");
-  
+    
     //replace with time/step for all timesteps
     for(unsigned int i=0;i<timesteps;i++)
     { 
-      for(int j=0;j<nnodes;i++)
+      for(int j=0;j<nnodes;j++)
       {
-        fprintf(fp,"%u, %u, %u", npar[j][i], import_dependencies[j][i], export_dependencies[j][i]);
+        if(j == nnodes-1)
+        { 
+          fprintf(fp,"%u, %i, %i, %i\n", i, nparticle[i][j], import[i][j], export[i][j]);
+        }
+        else
+        {
+          fprintf(fp,"%u, %i, %i, %i, ", i, nparticle[i][j], import[i][j], export[i][j]);
+        }
       }
-      if(i!=timesteps-1)
-      {
-        fprintf(fp,", ");
-      }else
-      {
-        fprintf(fp,"\n");
-      }
-
     } 
-    fclose(fp);
+    fclose(fp); 
   }
 }
 
 /* migrate triangles "in-place" to new ranks */
-static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, REAL *t[3][3], REAL *v[3], int *rank, unsigned int *importn, unsigned int *exportn)
+static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, REAL *t[3][3], REAL *v[3], int *rank, int num_gid_entries, int num_lid_entries, 
+                                int num_import, int *import_procs, int num_export, int *export_procs, unsigned int *export_local_id) 
 {
-  *importn=0;
-  *exportn=0;
-  
-  int nnodes;
-  MPI_Comm_size(MPI_COMM_WORLD, &nnodes);
-  
-  unsigned int **send_idx, *pivot; REAL **tbuffer[3][3], **vbuffer[3];
+  int nproc;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-  ERRMEM (tbuffer = (REAL **) malloc(nnodes*sizeof(REAL*)));
-  ERRMEM (vbuffer = (REAL **) malloc(nnodes*sizeof(REAL*)));
-  ERRMEM (send_idx = (unsigned int **) malloc(nnodes*sizeof(unsigned int*)));
-  ERRMEM (pivot = (unsigned int *) malloc(nnodes*sizeof(unsigned int)));
-  for(int i=0;i<nnodes;i++)
+  if(nt>0)
+  for (unsigned int i = 0; i < num_export; i++) 
   {
-    ERRMEM (tbuffer[i] = (REAL *) malloc(nt*sizeof(REAL*)));
-    ERRMEM (vbuffer[i] = (REAL *) malloc(nt*sizeof(REAL*)));
+    printf("export_id:%i\n", export_local_id[i]);   
+  }
+  
+  int **send_idx, *pivot; 
+  REAL **tbuffer[3][3], **vbuffer[3];
+  for(int i=0;i<3;i++)
+  {
+    tbuffer[0][i] = (REAL **) malloc(nproc*sizeof(REAL*));
+    tbuffer[1][i] = (REAL **) malloc(nproc*sizeof(REAL*));
+    tbuffer[2][i] = (REAL **) malloc(nproc*sizeof(REAL*));
+    vbuffer[i] = (REAL **) malloc(nproc*sizeof(REAL*));
+  }
+
+  send_idx = (int **) malloc(nproc*sizeof(int*));
+  pivot = (int *) malloc(nproc*sizeof(int));
+  for(int i=0;i<nproc;i++)
+  {
+    for(int j=0;j<3;j++)
+    {
+      tbuffer[j][0][i] = (REAL *) malloc(size*sizeof(REAL));
+      tbuffer[j][1][i] = (REAL *) malloc(size*sizeof(REAL));
+      tbuffer[j][2][i] = (REAL *) malloc(size*sizeof(REAL));
+      vbuffer[j][i] = (REAL *) malloc(size*sizeof(REAL));
+    }
     pivot[i] = 0;
-    ERRMEM (send_idx[i] = (unsigned int *) malloc(nt*sizeof(unsigned int)));
+    send_idx[i] = (int *) malloc(size*sizeof(int));
   }
   
-  for (unsigned int i = 0; i < nt; i++) 
+  if(nt>0)
+  for (unsigned int i = 0; i < num_export; i++) 
   {
-    send_idx[pivot[rank[i]]++][rank[i]] = i; 
+    send_idx[rank[export_local_id[i]]][pivot[rank[export_local_id[i]]]] = export_local_id[i];
+    pivot[rank[export_local_id[i]]]++;
   }
-
-  for(int i=0;i<nnodes;i++)
+  
+  int *pivot_buffer = (int *) malloc(nproc*sizeof(int));
+  
+  if(nt>0)
+  for(int i=0;i<nproc;i++)
   {
+    pivot_buffer[i] = pivot[i];
     for(unsigned int j=0;j<pivot[i];j++)
     {
       for(int k=0;k<3;k++)
       {
-        tbuffer[0][k][send_idx[j][i]][i] = t[0][k][send_idx[j][i]]; 
-        tbuffer[1][k][send_idx[j][i]][i] = t[1][k][send_idx[j][i]];
-        tbuffer[2][k][send_idx[j][i]][i] = t[2][k][send_idx[j][i]];
-
-        vbuffer[k][send_idx[j][i]][i] = v[k][send_idx[j][i]];
+        tbuffer[0][k][i][j] = t[0][k][send_idx[i][j]];  
+        tbuffer[1][k][i][j] = t[1][k][send_idx[i][j]]; 
+        tbuffer[2][k][i][j] = t[2][k][send_idx[i][j]]; 
+        
+        vbuffer[k][i][j] = v[k][send_idx[i][j]];
       }
     }
-  
-    //store number of exports
-    if(i != myrank)
-    {
-      *exportn += pivot[i];
-    }
-  }//can merge to next loop if correct since <nnodes limit;
-
-  nt = nt - *exportn;
-
-  unsigned int *pivot_buffer;
-  ERRMEM (pivot_buffer = (unsigned int *) malloc(nnodes*sizeof(unsigned int)));
-  pivot_buffer = pivot;
-
-  MPI_Status status;
-
-  //send buffers
-  for(int i=0;i<nnodes;i++)
-  {
-    //MPI_send(&pivot[i], pivot[i], MPI_INT, i, myrank, MPI_COMM_WORLD);
-    //MPI_send(&tbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD);
-    //MPI_send(&vbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD);
-
-    MPI_Sendrecv(&pivot_buffer[i], pivot[i], MPI_INT, i, myrank, MPI_COMM_WORLD, &pivot_buffer[i], pivot[i], MPI_INT, i, myrank, MPI_COMM_WORLD, &status);
-    
-    *importn += pivot[myrank];
-    
-    MPI_Sendrecv(&tbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &tbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &status);
-    MPI_Sendrecv(&vbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &vbuffer[i], pivot[i], MPI_DOUBLE, i, myrank, MPI_COMM_WORLD, &status);  
   }
-  nt = nt + *importn;  
+
+  if(myrank==0)
+  {
+    printf("t0:%f\n", tbuffer[0][0][1][0]);
+  }
+
+  //send buffers loop through procs is not correct, should loop through procs that need to send something/same for receive.(send has the pivot check*)
+  for(int i=0;i<nproc;i++)
+  {
+    if(myrank != i && pivot[i] > 0)
+    {  
+      MPI_Send(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+      MPI_Send(&tbuffer[i], pivot[i], MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
+      //MPI_Send(&vbuffer[i], pivot[i], MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
+    }     
+  }
+
+  for(int i=0;i<nproc;i++)
+  {
+    if(myrank != i && myrank != 0)
+    {
+      MPI_Recv(&pivot_buffer[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&tbuffer[0][0][i][0], pivot_buffer[i], MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for(int x=0;x<pivot_buffer[i];x++)
+      {
+        printf("received-tbuffer: %f\n", tbuffer[0][0][0][x]);
+      }
+        //MPI_Recv(&vbuffer[i], pivot_buffer[i], MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+  }
+   // MPI_Sendrecv(&pivot_buffer[0], 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &pivot_buffer[0], 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); 
+   // MPI_Sendrecv(&tbuffer[0], pivot[0], MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &tbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
+   // MPI_Sendrecv(&vbuffer[0], pivot[0], MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &vbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);  
 }
 
 int main (int argc, char **argv)
@@ -253,17 +293,15 @@ int main (int argc, char **argv)
   unsigned int nt; /* number of triangles */
   int *rank; /* migration ranks */
   unsigned int *pid; /*particle identifier */
-  unsigned int size; /* buffers size */
+  unsigned int size; /* ranks size */
   int myrank;
-  
-  /*load balancing n dependencies */
-  unsigned int *importn, *exportn;
-  
+  unsigned int *export_local_id;
+
   /* init */ 
   MPI_Init (&argc, &argv);
 
   MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
-
+  
   if (myrank == 0)
   {
     /* set nt */
@@ -291,8 +329,8 @@ int main (int argc, char **argv)
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-    ERRMEM (importn = (unsigned int *) malloc(sizeof(unsigned int[size])));
-    ERRMEM (exportn = (unsigned int *) malloc(sizeof(unsigned int[size])));
+    ERRMEM (export_local_id = (unsigned int *) malloc (sizeof(unsigned int[size])));
+    
     //nt = load_pointsVTK(t, tid); 
     /* generate triangles and velocities */
     generate_triangles_and_velocities (lo, hi, nt, t, v, tid); 
@@ -321,12 +359,13 @@ int main (int argc, char **argv)
     {
       ERRMEM (d[j] = (REAL *) malloc (nt * sizeof(REAL)));
     }
-    ERRMEM (importn = (unsigned int *) malloc(sizeof(unsigned int[size])));
-    ERRMEM (exportn = (unsigned int *) malloc(sizeof(unsigned int[size])));
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
+    ERRMEM (export_local_id = (unsigned int *) malloc (sizeof(unsigned int[size])));
   }
+  
+  int num_gid_entries, num_lid_entries, num_import, *import_procs, num_export, *export_procs;
   
   /* create load balancer */
   struct loba *lb = loba_create (ZOLTAN_RCB);
@@ -336,16 +375,16 @@ int main (int argc, char **argv)
   
   //for (time = 0.0; time < 1.0; time += step)
   {
-    loba_balance (lb, nt, t[0], tid, 1.1, rank);
     
-    for (unsigned int j = 0; j < nt; j++) 
-    {
-      printf ("rank[%u] = %d\n", j, rank[j]);
-    }
+    loba_balance (lb, nt, t[0], tid, 1.1, rank, &num_gid_entries, &num_lid_entries, &num_import, 
+                  import_procs, &num_export, export_procs, export_local_id); 
     
-    migrate_triangles (myrank, size, nt, t, v, rank, &importn[timesteps], &exporn[timesteps]);
+    for (unsigned int j = 0; j < nt; j++) printf ("rank[%u] = %d\n", j, rank[j]);
+    
+    migrate_triangles (myrank, size, nt, t, v, rank, num_gid_entries, num_lid_entries, 
+                       num_import, import_procs, num_export, export_procs, export_local_id); 
 
-    contact_distance(nt, t, p, q, d); 
+    //contact_distance(nt, t, p, q, d); 
 
     //integrate_triangles (step, lo, hi, nt, t, v);
     timesteps++;
@@ -353,8 +392,7 @@ int main (int argc, char **argv)
   
   if(myrank == 0)
   {
-    migrate_status(myrank, nt, t, timesteps, import, export);
-    //write_pointsVTK(nt, t, v);
+   // write_pointsVTK(nt, t, v);
   }
 
   /* finalise */
