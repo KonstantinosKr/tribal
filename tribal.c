@@ -381,6 +381,8 @@ static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, R
    // MPI_Sendrecv(&pivot_buffer[0], 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &pivot_buffer[0], 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); 
    // MPI_Sendrecv(&tbuffer[0], pivot[0], MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &tbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
    // MPI_Sendrecv(&vbuffer[0], pivot[0], MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &vbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);  
+  
+  
 
 }
 
@@ -469,6 +471,7 @@ int main (int argc, char **argv)
   }
   
   int num_gid_entries, num_lid_entries, num_import, *import_procs, num_export, *export_procs;
+  ZOLTAN_ID_PTR import_global_ids, import_local_ids, export_global_ids, export_local_ids;
   
   /* create load balancer */
   struct loba *lb = loba_create (ZOLTAN_RCB);
@@ -480,10 +483,19 @@ int main (int argc, char **argv)
   {
     
     loba_balance (lb, nt, t[0], tid, 1.1, rank, &num_gid_entries, &num_lid_entries, &num_import, 
-                  import_procs, &num_export, export_procs, export_local_id); 
+                  import_procs, &num_export, export_procs, export_local_id, 
+                  &import_global_ids, &import_local_ids, &export_global_ids, &export_local_ids); 
     
     for (unsigned int j = 0; j < nt; j++) printf ("rank[%u] = %d\n", j, rank[j]);
     
+    printf("RANK[%i]:num_import:%d\n", myrank, num_import);
+    printf("RANK[%i]:num_export:%d\n", myrank, num_export);
+    printf("RANK[%i]:num_gid_entries: %i, num_lid_entries: %i\n", myrank, num_gid_entries, num_lid_entries);
+    
+    for(int i=0;i<num_export;i++)
+    {
+      //printf("export_global_ids:%i\n", export_global_ids[0]);
+    }
     migrate_triangles (myrank, size, nt, t, v, rank, num_gid_entries, num_lid_entries, 
                        num_import, import_procs, num_export, export_procs, export_local_id); 
 

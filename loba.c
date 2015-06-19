@@ -126,7 +126,8 @@ struct loba* loba_create (enum algo al)
 /* balance points up to tolerance; output migration ranks */
 void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id, REAL tol, int *rank, 
                     int *num_gid_entries, int *num_lid_entries, int *num_import, int *import_procs, int *num_export, int *export_procs, 
-                    unsigned int *export_local_id) 
+                    unsigned int *export_local_id, ZOLTAN_ID_PTR *import_global_ids, ZOLTAN_ID_PTR *import_local_ids, 
+                    ZOLTAN_ID_PTR *export_global_ids, ZOLTAN_ID_PTR *export_local_ids) 
 {
   switch (lb->al)
   {
@@ -153,7 +154,7 @@ void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id
 	    num_import, &import_global_ids, &import_local_ids, &import_procs,
 	    num_export, &export_global_ids, &export_local_ids, &export_procs) == ZOLTAN_OK, "Zoltan load balancing failed");
 
-    unsigned int myrank;
+    int myrank;
     MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
     
     for (int i = 0; i < n; i ++) rank[i] = myrank;
@@ -164,9 +165,14 @@ void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id
       export_local_id[i] = export_local_ids[i];
     }
    
-    printf("RANK[%i]:num_import:%d\n", myrank, *num_import);
-    printf("RANK[%i]:num_export:%d\n", myrank, *num_export);
+    //printf("RANK[%i]:num_import:%d\n", myrank, *num_import);
+    //printf("RANK[%i]:num_export:%d\n", myrank, *num_export);
+    //printf("RANK[%i]:num_gid_entries: %i, num_lid_entries: %i\n", myrank, *num_gid_entries, *num_lid_entries);
     
+    for(int i=0;i<*num_export;i++)
+    {
+      printf("export_global_ids:%i\n", export_global_ids[i]);
+    }
     //Zoltan_LB_Free_Data (&import_global_ids, &import_local_ids, &import_procs, &export_global_ids, &export_local_ids, &export_procs);
   }
   break;
