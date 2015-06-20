@@ -184,114 +184,14 @@ void migrate_status(int myrank, unsigned int nt, REAL *t[3][3], unsigned int tim
 }
 
 /* migrate triangles "in-place" to new ranks */
-static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, REAL *t[3][3], REAL *v[3], int *rank, int num_gid_entries, int num_lid_entries, 
-                                int num_import, int *import_procs, int num_export, int *export_procs, unsigned int *export_local_id) 
+static void migrate_triangles (unsigned int size, unsigned int nt, REAL *t[3][3], REAL *v[3],  
+                              int num_import, int *import_procs, int num_export, int *export_procs, 
+                              ZOLTAN_ID_PTR import_global_ids, ZOLTAN_ID_PTR export_global_ids,
+                              ZOLTAN_ID_PTR import_local_ids, ZOLTAN_ID_PTR export_local_ids) 
 {
-  /*
-  int nproc;
+  int nproc, myrank;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-
-  if(nt>0)
-  for (unsigned int i = 0; i < num_export; i++) 
-  {
-    printf("export_id:%i\n", export_local_id[i]);   
-  }
-  
-  int **send_idx, *pivot; 
-  REAL **tbuffer[3][3], **vbuffer[3];
-  for(int i=0;i<3;i++)
-  {
-    tbuffer[0][i] = (REAL **) malloc(nproc*sizeof(REAL*));
-    tbuffer[1][i] = (REAL **) malloc(nproc*sizeof(REAL*));
-    tbuffer[2][i] = (REAL **) malloc(nproc*sizeof(REAL*));
-    vbuffer[i] = (REAL **) malloc(nproc*sizeof(REAL*));
-  }
-
-  send_idx = (int **) malloc(nproc*sizeof(int*));
-  pivot = (int *) malloc(nproc*sizeof(int));
-  for(int i=0;i<nproc;i++)
-  {
-    for(int j=0;j<3;j++)
-    {
-      tbuffer[j][0][i] = (REAL *) malloc(size*sizeof(REAL));
-      tbuffer[j][1][i] = (REAL *) malloc(size*sizeof(REAL));
-      tbuffer[j][2][i] = (REAL *) malloc(size*sizeof(REAL));
-      vbuffer[j][i] = (REAL *) malloc(size*sizeof(REAL));
-    }
-    pivot[i] = 0;
-    send_idx[i] = (int *) malloc(size*sizeof(int));
-  }
-  
-  if(nt>0)
-  for (unsigned int i = 0; i < num_export; i++) 
-  {
-    send_idx[rank[export_local_id[i]]][pivot[rank[export_local_id[i]]]] = export_local_id[i];
-    pivot[rank[export_local_id[i]]]++;
-  }
-  
-  int *pivot_buffer = (int *) malloc(nproc*sizeof(int));
-  
-  if(nt>0)
-  for(int i=0;i<nproc;i++)
-  {
-    pivot_buffer[i] = pivot[i];
-    for(unsigned int j=0;j<pivot[i];j++)
-    {
-      for(int k=0;k<3;k++)
-      {
-        tbuffer[0][k][i][j] = t[0][k][send_idx[i][j]];  
-        
-        tbuffer[1][k][i][j] = t[1][k][send_idx[i][j]]; 
-        
-        tbuffer[2][k][i][j] = t[2][k][send_idx[i][j]]; 
-        
-        vbuffer[k][i][j] = v[k][send_idx[i][j]];
-      }
-    }
-  }
-
-  if(myrank==0)
-  {
-    printf("t0:%f\n", tbuffer[0][0][1][0]);
-  }
-
-  //send buffers loop through procs is not correct, should loop through procs that need to send something/same for receive.(send has the pivot check*)
-  for(int i=0;i<nproc;i++)
-  {
-    if(myrank != i && pivot[i] > 0)
-    {  
-      MPI_Send(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-      MPI_Send(&tbuffer[i], pivot[i], MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
-      //MPI_Send(&vbuffer[i], pivot[i], MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
-    }     
-  }
-
-  for(int i=0;i<nproc;i++)
-  {
-    if(myrank != i && myrank != 0)
-    {
-      MPI_Recv(&pivot_buffer[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&tbuffer[0][0][i][0], pivot_buffer[i], MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for(int x=0;x<pivot_buffer[i];x++)
-      {
-        printf("received-tbuffer: %f\n", tbuffer[0][0][0][x]);
-      }
-        //MPI_Recv(&vbuffer[i], pivot_buffer[i], MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    }
-  }
-   // MPI_Sendrecv(&pivot_buffer[0], 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &pivot_buffer[0], 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); 
-   // MPI_Sendrecv(&tbuffer[0], pivot[0], MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &tbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
-   // MPI_Sendrecv(&vbuffer[0], pivot[0], MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &vbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);  
-*/
-
-  int nproc;
-  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-
-  if(nt>0)
-  for (unsigned int i = 0; i < num_export; i++) 
-  {
-    printf("export_id:%i\n", export_local_id[i]);   
-  }
+  MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
   
   int **send_idx, *pivot; 
   REAL *tbuffer[3], *vbuffer;
@@ -302,23 +202,22 @@ static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, R
   
   send_idx = (int **) malloc(nproc*sizeof(int*));
   pivot = (int *) malloc(nproc*sizeof(int));
+
   for(int i=0;i<nproc;i++)
   {
     pivot[i] = 0;
     send_idx[i] = (int *) malloc(size*sizeof(int));
   }
 
-  
-  if(nt>0)
   for (unsigned int i = 0; i < num_export; i++) 
   {
-    send_idx[rank[export_local_id[i]]][pivot[rank[export_local_id[i]]]] = export_local_id[i];
-    pivot[rank[export_local_id[i]]]++;
+    int proc = export_procs[export_local_ids[i]];
+    send_idx[proc][pivot[proc]] = export_local_ids[i];
+    pivot[proc]++;
   }
   
   int *pivot_buffer = (int *) malloc(nproc*sizeof(int));
   
-  if(nt>0)
   for(int i=0;i<nproc;i++)
   {
     pivot_buffer[i] = pivot[i];
@@ -326,24 +225,13 @@ static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, R
     {
       for(int k=0;k<3;k++)
       {
-        tbuffer[0][(i*nproc*pivot[i]*3)+j+(k+1)] = t[0][k][send_idx[i][j]];  
-        
+        tbuffer[0][(i*nproc*pivot[i]*3)+j+(k+1)] = t[0][k][send_idx[i][j]];        
         tbuffer[1][(i*nproc*pivot[i]*3)+j+(k+1)] = t[1][k][send_idx[i][j]]; 
-        
         tbuffer[2][(i*nproc*pivot[i]*3)+j+(k+1)] = t[2][k][send_idx[i][j]]; 
         
         vbuffer[(i*nproc*pivot[i]*3)+j+(k+1)] = v[k][send_idx[i][j]];
       }
     }
-  }
- 
-  //test  
-  if(myrank==0)
-  {
-  //printf("velocity1Origin:%f\n", v[0][send_idx[1][0]]);
-  //printf("velocity1:%f\n", vbuffer[(1*nproc*pivot[1]*3)+0+(0+1)]);
-  //printf("t0Origin:%f\n", t[0][0][send_idx[1][0]]);  
-  //printf("t0:%f\n", tbuffer[0][(1*nproc*pivot[1]*3)+0+(0+1)]);
   }
 
   //send buffers loop through procs is not correct, should loop through procs that need to send something/same for receive.(send has the pivot check*)
@@ -355,10 +243,8 @@ static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, R
       MPI_Send(&tbuffer[0][(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
       MPI_Send(&tbuffer[1][(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
       MPI_Send(&tbuffer[2][(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD);
-      for(int x=0;x<pivot[i];x++)
-      {
-        printf("sent-tbuffer: %f\n", tbuffer[0][(i*nproc*pivot[i]*3)+x+(0+1)]);
-      }
+      for(int x=0;x<pivot[i];x++) printf("sent-tbuffer: %f\n", tbuffer[0][(i*nproc*pivot[i]*3)+x+(0+1)]);
+
       MPI_Send(&vbuffer[(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
     }     
   }
@@ -371,19 +257,14 @@ static void migrate_triangles (int myrank, unsigned int size, unsigned int nt, R
       MPI_Recv(&tbuffer[0][(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       MPI_Recv(&tbuffer[1][(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       MPI_Recv(&tbuffer[2][(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for(int x=0;x<pivot_buffer[i];x++)
-      {
-        printf("received-tbuffer: %f\n", tbuffer[0][(i*nproc*pivot_buffer[i]*3)+x+(0+1)]);
-      }
+      for(int x=0;x<pivot_buffer[i];x++) printf("received-tbuffer: %f\n", tbuffer[0][(i*nproc*pivot_buffer[i]*3)+x+(0+1)]);
+      
       MPI_Recv(&vbuffer[(i*nproc*pivot_buffer[i]*3)], pivot_buffer[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
   }
    // MPI_Sendrecv(&pivot_buffer[0], 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &pivot_buffer[0], 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); 
    // MPI_Sendrecv(&tbuffer[0], pivot[0], MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &tbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
    // MPI_Sendrecv(&vbuffer[0], pivot[0], MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &vbuffer[0], pivot_buffer[0], MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);  
-  
-  
-
 }
 
 int main (int argc, char **argv)
@@ -400,7 +281,6 @@ int main (int argc, char **argv)
   unsigned int *pid; /*particle identifier */
   unsigned int size; /* ranks size */
   int myrank;
-  unsigned int *export_local_id;
 
   /* init */ 
   MPI_Init (&argc, &argv);
@@ -434,7 +314,6 @@ int main (int argc, char **argv)
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-    ERRMEM (export_local_id = (unsigned int *) malloc (sizeof(unsigned int[size])));
     
     //nt = load_pointsVTK(t, tid); 
     /* generate triangles and velocities */
@@ -467,10 +346,9 @@ int main (int argc, char **argv)
     ERRMEM (rank = (int *) malloc (sizeof(int[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-    ERRMEM (export_local_id = (unsigned int *) malloc (sizeof(unsigned int[size])));
   }
   
-  int num_gid_entries, num_lid_entries, num_import, *import_procs, num_export, *export_procs;
+  int  num_import, *import_procs, num_export, *export_procs;
   ZOLTAN_ID_PTR import_global_ids, import_local_ids, export_global_ids, export_local_ids;
   
   /* create load balancer */
@@ -481,31 +359,30 @@ int main (int argc, char **argv)
   
   //for (time = 0.0; time < 1.0; time += step)
   {
-    
-    loba_balance (lb, nt, t[0], tid, 1.1, rank, &num_gid_entries, &num_lid_entries, &num_import, 
-                  import_procs, &num_export, export_procs, export_local_id, 
-                  &import_global_ids, &import_local_ids, &export_global_ids, &export_local_ids); 
-    
-    for (unsigned int j = 0; j < nt; j++) printf ("rank[%u] = %d\n", j, rank[j]);
+    loba_balance (lb, nt, t[0], tid, 1.1, 
+                  &num_import, &import_procs, 
+                  &num_export, &export_procs, 
+                  &import_global_ids, &import_local_ids, 
+                  &export_global_ids, &export_local_ids);
     
     printf("RANK[%i]:num_import:%d\n", myrank, num_import);
     printf("RANK[%i]:num_export:%d\n", myrank, num_export);
-    printf("RANK[%i]:num_gid_entries: %i, num_lid_entries: %i\n", myrank, num_gid_entries, num_lid_entries);
     
-    for(int i=0;i<num_export;i++)
+    for (int i=0;i<num_import;i++)
     {
-      //printf("export_global_ids:%i\n", export_global_ids[0]);
+      printf("RANK[%d]:import_global_ids:%u\n", myrank, import_global_ids[i]);
     }
-    migrate_triangles (myrank, size, nt, t, v, rank, num_gid_entries, num_lid_entries, 
-                       num_import, import_procs, num_export, export_procs, export_local_id); 
+    
+    migrate_triangles (size, nt, t, v, num_import, import_procs, num_export, export_procs, export_local_ids, import_local_ids, export_global_ids, export_local_ids); 
 
-    //contact_distance(nt, t, p, q, d); 
+    contact_distance(nt, t, p, q, d); 
 
     //integrate_triangles (step, lo, hi, nt, t, v);
     timesteps++;
+
+    Zoltan_LB_Free_Data (&import_global_ids, &import_local_ids, &import_procs, &export_global_ids, &export_local_ids, &export_procs);
   }
-  
-  if(myrank == 0)
+
   {
    // write_pointsVTK(nt, t, v);
   }
