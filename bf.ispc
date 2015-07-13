@@ -141,13 +141,12 @@ export void ispc_bf (uniform unsigned int n,
       Q[1][i] = P[1][i];
       Q[2][i] = P[2][i];
 
-      int iflt_max = 0x7f800000; // +infinity
-      float NAN = floatbits(iflt_max);
-      if (r < 0.0 || r > 1.0 || r == NAN) {
+      if (r < 0.0 || r > 1.0 || r != r) {
         distance[i] = -2;
         break;
       }
       
+      print("xxx\n");
       if(j<3){
         w[0] = P[0][i] - pointArray[0][3];
         w[1] = P[1][i] - pointArray[1][3];

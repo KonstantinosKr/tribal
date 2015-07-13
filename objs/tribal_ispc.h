@@ -21,7 +21,7 @@ namespace ispc { /* namespace */
 #if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)
 extern "C" {
 #endif // __cplusplus
-    extern void generate_triangles_and_velocities(double * lo, double * hi, int32_t nt, double * t[][3], double *  * v, uint32_t * tid);
+    extern void generate_triangles_and_velocities(double * lo, double * hi, int32_t nt, double * t[][3], double *  * v, uint32_t * tid, uint32_t * pid);
     extern void integrate_triangles(double step, double * lo, double * hi, int32_t nt, double * t[][3], double *  * v);
 #if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)
 } /* end extern C */

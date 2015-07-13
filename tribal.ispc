@@ -1,4 +1,4 @@
-export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3], uniform unsigned int tid[])
+export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3], uniform unsigned int tid[], uniform unsigned int pid[])
 {
   struct RNGState state;
 
@@ -53,6 +53,7 @@ export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL 
     v[2][i] = 0.5-frandom(&state);
 
     tid[i] = i;
+    pid[i] = i;
   }
 }
 

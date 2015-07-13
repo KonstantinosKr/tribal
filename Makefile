@@ -22,7 +22,7 @@ EXE=tribal
 REAL=double
 
 # Debug version
-DEBUG=no
+DEBUG=yes
 
 # Do the rest
 include common.mk
