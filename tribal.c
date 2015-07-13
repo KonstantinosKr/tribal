@@ -260,7 +260,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
     printf("RANK[%i]: sending tid: %i, t_exports: %i\n", myrank, export_global_ids[i], num_export);
     
     //mark exported tid
-    tid[export_local_ids[i]] = 999;
+    tid[export_local_ids[i]] = UINT_MAX;
   }
 
   //assign values to tmp export buffers
@@ -291,7 +291,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
   
     for(int i = 0; i < *nt; i++)
     {
-        //printf("BeforeREFINE - RANK[%i]: tid = %i\n", myrank, tid[i]);
+        printf("BeforeREFINE - RANK[%i]: tid = %i\n", myrank, tid[i]);
     }
   ///////////////////////////////////////////////
   //refine local arrays and ids (memory gaps)
@@ -302,10 +302,11 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
     unsigned int j=0;
     for(j=pv;j>export_local_ids[i];j--)
     {
-      if(tid[j] != 999)
+      printf("RANK[%i], i:%u, tid[%u] = %i, local_ids = %i\n", myrank, i, j, tid[j], export_local_ids[i]);
+      if(tid[j] != UINT_MAX)
       {
         tid[export_local_ids[i]] = tid[j];
-        tid[j] = 777;
+        tid[j] = UINT_MAX;
         for(int k=0;k<3;k++)
         {
           t[0][k][export_local_ids[i]] = t[0][k][j];
@@ -328,7 +329,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
   }
     for(int i = 0; i < *nt; i++)
     {
-        //printf("AfterREFINE - RANK[%i]: tid = %i\n", myrank, tid[i]);
+        printf("AfterREFINE - RANK[%i]: tid = %i\n", myrank, tid[i]);
     }
   
   *nt = *nt - num_export;
@@ -340,7 +341,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
   int *import_unique_procs = (int*) malloc(nproc*sizeof(int));
   int num_import_unique=0;
   idx=0;
-  unsigned int receive_idx = *nt - num_export; //set to last id
+  unsigned int receive_idx = *nt; //set to last id
   for(unsigned int i=0; i < num_import; i++)
   {
     int proc = import_procs[i];
@@ -373,7 +374,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
       }
     }
     tid[receive_idx] = import_global_ids[i];
-    printf("AFTER IMPORT-RECEIVE RANK[%i] TID = %i, local id: %i\n", myrank, tid[receive_idx], receive_idx);
+    printf("AFTER IMPORT-RECEIVE RANK[%i] TID = %i, local id: %i, nt: %i\n", myrank, tid[receive_idx], receive_idx, *nt);
     receive_idx++;
     //printf("received GID: %i\n", import_global_ids[i]);
     //printf("received LID: %i\n", import_local_ids[i]);
@@ -408,7 +409,9 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
   }
   
   //free things
-  receive_idx = *nt-num_import; // set to last id
+  receive_idx = *nt-receive_idx; // set to last id
+  printf("RANK[%i]: receive_idx: %i\n", myrank, receive_idx);
+  
   for(int x=0;x<num_import_unique;x++)
   {
     int i = import_unique_procs[x];
@@ -522,7 +525,7 @@ int main (int argc, char **argv)
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
       
-      for(unsigned int i=0;i<size;i++) tid[i] = 777;
+      for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
   }
   
   int  num_import, *import_procs, num_export, *export_procs;
@@ -535,7 +538,7 @@ int main (int argc, char **argv)
   REAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time< 2; time++)
+  for(time = 0; time< 1; time++)
   {
     loba_balance (lb, nt, t[0], tid, 1.1, 
                   &num_import, &import_procs, 
@@ -546,14 +549,14 @@ int main (int argc, char **argv)
     //printf("RANK[%i]:num_import:%d\n", myrank, num_import);
     //printf("RANK[%i]:num_export:%d\n", myrank, num_export);
    
-    for(int i = 0; i < 8; i++)
+    for(int i = 0; i < nt; i++)
     {
       printf("Before - RANK[%i]: tid = %i\n", myrank, tid[i]);
     }
    
     migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids); 
    
-    for(int i = 0; i < 8; i++)
+    for(int i = 0; i < nt; i++)
     {
      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
     }
