@@ -256,8 +256,6 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
     //set send indices and pivots for buffers
     send_idx[proc][pivot[proc]] = export_local_ids[i];
     pivot[proc]++;
-      
-    printf("RANK[%i]: sending tid: %i, t_exports: %i\n", myrank, export_global_ids[i], num_export);
     
     //mark exported tid
     tid[export_local_ids[i]] = UINT_MAX;
@@ -277,22 +275,10 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
         vbuffer[(i*nproc*pivot[i]*3)+j+(k+1)] = v[k][send_idx[i][j]];
         pbuffer[(i*nproc*pivot[i]*3)+j+(k+1)] = p[k][send_idx[i][j]];
         qbuffer[(i*nproc*pivot[i]*3)+j+(k+1)] = q[k][send_idx[i][j]];
-          
-        unsigned int x = send_idx[i][j];
-        t[0][k][x] = 0;
-        t[1][k][x] = 0;
-        t[2][k][x] = 0;
-        v[k][x] = 0;
-        p[k][x] = 0;
-        q[k][x] = 0;
       }
     }
   }
   
-    for(int i = 0; i < *nt; i++)
-    {
-        printf("BeforeREFINE - RANK[%i]: tid = %i\n", myrank, tid[i]);
-    }
   ///////////////////////////////////////////////
   //refine local arrays and ids (memory gaps)
   unsigned int pv=*nt-1;
@@ -302,7 +288,6 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
     unsigned int j=0;
     for(j=pv;j>export_local_ids[i];j--)
     {
-      printf("RANK[%i], i:%u, tid[%u] = %i, local_ids = %i\n", myrank, i, j, tid[j], export_local_ids[i]);
       if(tid[j] != UINT_MAX)
       {
         tid[export_local_ids[i]] = tid[j];
@@ -315,33 +300,21 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
           v[k][export_local_ids[i]] = v[k][j]; 
           p[k][export_local_ids[i]] = p[k][j]; 
           q[k][export_local_ids[i]] = q[k][j];
-            
-          t[0][k][j] = 0;
-          t[1][k][j] = 0;
-          t[2][k][j] = 0;
-          v[k][j] = 0;
-          p[k][j] = 0;
-          q[k][j] = 0;
         }
         break;
       }
     }
   }
-    for(int i = 0; i < *nt; i++)
-    {
-        printf("AfterREFINE - RANK[%i]: tid = %i\n", myrank, tid[i]);
-    }
   
-  *nt = *nt - num_export;
-    
-  //printf("AFTER EXPORT Rank[%i], n: %i\n", myrank, *nt);
+  //unsigned int ntexport = *nt - num_export;
+  //printf("AFTER EXPORT Rank[%i], n: %i\n", myrank, ntexport);
  
   //////////////////////////////////////////////////////////////////////////
   //prepare import buffers
   int *import_unique_procs = (int*) malloc(nproc*sizeof(int));
   int num_import_unique=0;
   idx=0;
-  unsigned int receive_idx = *nt; //set to last id
+  unsigned int receive_idx = *nt - num_export; //set to last id
   for(unsigned int i=0; i < num_import; i++)
   {
     int proc = import_procs[i];
@@ -374,13 +347,10 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
       }
     }
     tid[receive_idx] = import_global_ids[i];
-    printf("AFTER IMPORT-RECEIVE RANK[%i] TID = %i, local id: %i, nt: %i\n", myrank, tid[receive_idx], receive_idx, *nt);
     receive_idx++;
-    //printf("received GID: %i\n", import_global_ids[i]);
-    //printf("received LID: %i\n", import_local_ids[i]);
   }
-  if(num_import > 0) *nt = *nt + receive_idx;//set new nt
-  //printf("AFTER IMPORT Rank[%i], n: %i\n", myrank, *nt);
+  if(num_import > 0) *nt = *nt + num_import;//set new nt
+  if(num_export > 0) *nt = *nt - num_export;
  
   //for(int i=0;i < num_import_unique;i++)
     //printf("%d:RANK[%d] - import_ID:%d, local_id:%d\n", i, myrank, import_unique_procs[i], import_local_ids[i]);
@@ -404,13 +374,9 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
       MPI_Send(&vbuffer[(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
       MPI_Send(&pbuffer[(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
       MPI_Send(&qbuffer[(i*nproc*pivot[i]*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
-      //*nt = *nt - pivot[i];
     }
   }
-  
-  //free things
   receive_idx = *nt-receive_idx; // set to last id
-  printf("RANK[%i]: receive_idx: %i\n", myrank, receive_idx);
   
   for(int x=0;x<num_import_unique;x++)
   {
@@ -440,12 +406,10 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
       }
       receive_idx++;
     }
-
-    //*nt =  *nt + pivot[i];
   }
 
   for(int i=0; i<3;i++)
-  {
+  {//free memory
     free(tbuffer[i]);
   }
     free(pivot);
@@ -477,7 +441,7 @@ int main (int argc, char **argv)
   {
     /* set nt */
     if (argc > 1) nt = atoi (argv[1]);
-    else nt = 6;
+    else nt = 10;
 
     /* buffers */
     size = 4*nt;
@@ -496,7 +460,7 @@ int main (int argc, char **argv)
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
       
-      for(unsigned int i=0;i<size;i++) tid[i] = 777;
+      for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
     
     //nt = load_pointsVTK(t, tid); 
     /* generate triangles and velocities */
@@ -509,7 +473,7 @@ int main (int argc, char **argv)
 
     /* buffers */
     if (argc > 1) size = atoi (argv[1])*4;
-    else size = 6*4;
+    else size = 10*4;
 
     for (int i = 0; i < 3; i ++)
     {
@@ -538,7 +502,7 @@ int main (int argc, char **argv)
   REAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time< 1; time++)
+  for(time = 0; time< 10; time++)
   {
     loba_balance (lb, nt, t[0], tid, 1.1, 
                   &num_import, &import_procs, 
@@ -575,7 +539,7 @@ int main (int argc, char **argv)
   /* finalise */
   loba_destroy (lb);
 
-  for (int i = 0; i < 3; i ++)
+  for (int i = 0; i < 2; i ++)
   {
     free (t[0][i]);
     free (t[1][i]);
