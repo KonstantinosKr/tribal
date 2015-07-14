@@ -74,6 +74,8 @@ unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
                 t[2][0][i] = point[0][index];
                 t[2][1][i] = point[1][index];
                 t[2][2][i] = point[2][index];
+                
+                tid[i] = i;
             }
         }
     } while (ch != EOF);
@@ -84,7 +86,15 @@ void write_pointsVTK(unsigned int nt, REAL *t[3][3], REAL *v[3], unsigned int ti
 {
     for(unsigned int i=0;i<timesteps;i++)
     {
-      FILE *fp = fopen("output.vtk", "w+");
+      char iter[15];
+      sprintf(iter, "%u", i);
+      char filename[50] = "output/output"; //care or buffer overflow
+      strcat(filename, iter);
+      strcat(filename, ".vtk");
+      printf("%s\n", filename);
+        printf("%i\n", i);
+      
+      FILE *fp = fopen(filename, "w+");
       
       fprintf(fp,"# vtk DataFile Version 2.0\nOutput vtk file\nASCII\n\nDATASET UNSTRUCTURED_GRID\nPOINTS %i float\n", nt*3);
       
@@ -441,10 +451,10 @@ int main (int argc, char **argv)
   {
     /* set nt */
     if (argc > 1) nt = atoi (argv[1]);
-    else nt = 10;
+    else nt = 1000000;
 
     /* buffers */
-    size = 4*nt;
+    size = 10*nt;
 
     for (int i = 0; i < 3; i ++)
     {
@@ -459,12 +469,12 @@ int main (int argc, char **argv)
     ERRMEM (d = (REAL *) malloc (nt * nt * sizeof(REAL)));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-      
-      for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
     
-    //nt = load_pointsVTK(t, tid); 
+    for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
+    
+    nt = load_pointsVTK(t, tid);
     /* generate triangles and velocities */
-    generate_triangles_and_velocities (lo, hi, nt, t, v, tid, pid); 
+    //generate_triangles_and_velocities (lo, hi, nt, t, v, tid, pid);
   }
   else
   {
@@ -473,7 +483,7 @@ int main (int argc, char **argv)
 
     /* buffers */
     if (argc > 1) size = atoi (argv[1])*4;
-    else size = 10*4;
+    else size = 1000000*4;
 
     for (int i = 0; i < 3; i ++)
     {
@@ -489,7 +499,7 @@ int main (int argc, char **argv)
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
       
-      for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
+    for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
   }
   
   int  num_import, *import_procs, num_export, *export_procs;
@@ -502,7 +512,7 @@ int main (int argc, char **argv)
   REAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time< 10; time++)
+  for(time = 0; time < 2; time++)
   {
     loba_balance (lb, nt, t[0], tid, 1.1, 
                   &num_import, &import_procs, 
@@ -515,26 +525,27 @@ int main (int argc, char **argv)
    
     for(int i = 0; i < nt; i++)
     {
-      printf("Before - RANK[%i]: tid = %i\n", myrank, tid[i]);
+      printf("Before - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
     }
    
-    migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids); 
-   
-    for(int i = 0; i < nt; i++)
-    {
-     printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
-    }
+    migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids);
     
     printf("RANK[%i]:NT:%i\n\n\n\n", myrank, nt);
     
-    //contact_distance(nt, t, p, q, d); 
+    //contact_distance(nt, t, p, q, d);
+      
+    for(int i = 0; i < nt; i++)
+    {
+      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
+    }
     
     //integrate_triangles (step, lo, hi, nt, t, v);
     
     timesteps++;
   }
-
-  //write_pointsVTK(nt, t, v, timesteps);
+  
+  if(myrank == 0)
+  write_pointsVTK(nt, t, v, timesteps);
 
   /* finalise */
   loba_destroy (lb);
