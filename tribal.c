@@ -10,10 +10,8 @@
 
 unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
 {
-    FILE *fp1 = fopen("input1.vtk", "r");
-    
-    unsigned int nt=0;
-    
+    FILE *fp1 = fopen("input.vtk", "r");
+    unsigned int nt;
     if( fp1 == NULL )
     {
         perror("Error while opening the file.\n");
@@ -27,7 +25,7 @@ unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
         ch = fscanf(fp1,"%s",word);
         if(strcmp(word, "POINTS")==0)
         {
-            printf("found!");
+            printf("found!\n");
             ch = fscanf(fp1,"%s",word);
             unsigned int n = atoi(word);
             //get points
@@ -45,6 +43,7 @@ unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
                 point[1][i] = atof(word);
                 ch = fscanf(fp1, "%s", word);
                 point[2][i] = atof(word);
+                printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
             }
         }
         if(strcmp(word, "CELLS")==0)
@@ -64,16 +63,24 @@ unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
                 t[0][1][i] = point[1][index];
                 t[0][2][i] = point[2][index];
                 
+                printf("idx:%s T[0][0] = %f | T[0][1] = %f | T[0][2] = %f\n", word, t[0][0][i], t[0][1][i], t[0][2][i]);
+                
                 ch = fscanf(fp1,"%s",word);
                 index = atoi(word);
                 t[1][0][i] = point[0][index];
                 t[1][1][i] = point[1][index];
                 t[1][2][i] = point[2][index];
                 
+                printf("idx:%s T[1][0] = %f | T[1][1] = %f | T[1][2] = %f\n", word, t[1][0][i], t[1][1][i], t[1][2][i]);
+                
+                ch = fscanf(fp1,"%s",word);
                 index = atoi(word);
                 t[2][0][i] = point[0][index];
                 t[2][1][i] = point[1][index];
                 t[2][2][i] = point[2][index];
+                
+                printf("idx:%s T[2][0] = %f | T[2][1] = %f | T[2][2] = %f\n", word, t[2][0][i], t[2][1][i], t[2][2][i]);
+                
                 
                 tid[i] = i;
             }
@@ -84,15 +91,15 @@ unsigned int load_pointsVTK(double *t[3][3], unsigned int tid[])
 
 void write_pointsVTK(unsigned int nt, REAL *t[3][3], REAL *v[3], unsigned int timesteps)
 {
-    for(unsigned int i=0;i<timesteps;i++)
+    //for(unsigned int x=0;x<timesteps;x++)
     {
       char iter[15];
-      sprintf(iter, "%u", i);
+      sprintf(iter, "%u", timesteps);
       char filename[50] = "output/output"; //care or buffer overflow
       strcat(filename, iter);
       strcat(filename, ".vtk");
       printf("%s\n", filename);
-        printf("%i\n", i);
+        //printf("%i\n", x);
       
       FILE *fp = fopen(filename, "w+");
       
@@ -434,8 +441,8 @@ int main (int argc, char **argv)
   REAL *d; /*distance */
   REAL *p[3],*q[3];
   unsigned int *tid; /* triangle identifiers */
-  REAL lo[3] = {0, 0, 0}; /* lower corner */
-  REAL hi[3] = {1, 1, 1}; /* upper corner */
+  REAL lo[3] = {-1000, -1000, -1000}; /* lower corner */
+  REAL hi[3] = {1000, 1000, 1000}; /* upper corner */
   unsigned int nt; /* number of triangles */
   int *rank; /* migration ranks */
   unsigned int *pid; /*particle identifier */
@@ -472,9 +479,10 @@ int main (int argc, char **argv)
     
     for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
     
-    nt = load_pointsVTK(t, tid);
-    /* generate triangles and velocities */
     //generate_triangles_and_velocities (lo, hi, nt, t, v, tid, pid);
+    
+    nt = load_pointsVTK(t, tid);
+    generate_velocities(lo, hi, nt, v);
   }
   else
   {
@@ -509,43 +517,47 @@ int main (int argc, char **argv)
   struct loba *lb = loba_create (ZOLTAN_RCB);
 
   /* perform time stepping */
-  REAL step = 1E-3, time; unsigned int timesteps=0;
+  REAL step = 1E-1, time; unsigned int timesteps=0;
   
-  //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 2; time++)
+  for (time = 0.0; time < 50.0; time += step)
+  //for(time = 0; time < 20; time++)
   {
-    loba_balance (lb, nt, t[0], tid, 1.1, 
+    /*loba_balance (lb, nt, t[0], tid, 1.1,
                   &num_import, &import_procs, 
                   &num_export, &export_procs, 
                   &import_global_ids, &import_local_ids, 
                   &export_global_ids, &export_local_ids);
-    
+    */
+      
     //printf("RANK[%i]:num_import:%d\n", myrank, num_import);
     //printf("RANK[%i]:num_export:%d\n", myrank, num_export);
    
     for(int i = 0; i < nt; i++)
     {
-      printf("Before - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
+      //printf("Before - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
     }
    
-    migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids);
+    //migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids);
     
-    printf("RANK[%i]:NT:%i\n\n\n\n", myrank, nt);
+    //printf("RANK[%i]:NT:%i\n\n\n\n", myrank, nt);
     
     //contact_distance(nt, t, p, q, d);
       
     for(int i = 0; i < nt; i++)
     {
-      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
+      //printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
     }
+      
+      if(myrank == 0)
+          write_pointsVTK(nt, t, v, timesteps);
     
-    //integrate_triangles (step, lo, hi, nt, t, v);
-    
+    integrate_triangles (step, lo, hi, nt, t, v);
+      
     timesteps++;
   }
   
   if(myrank == 0)
-  write_pointsVTK(nt, t, v, timesteps);
+  //write_pointsVTK(nt, t, v, timesteps);
 
   /* finalise */
   loba_destroy (lb);

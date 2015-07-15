@@ -57,6 +57,24 @@ export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL 
   }
 }
 
+export void generate_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform v[3])
+{
+    struct RNGState state;
+
+    int seed = 0;
+
+    while (rdrand (&seed) == false);
+
+    seed_rng (&state, seed);
+
+    foreach (i = 0 ... nt)
+    {
+        v[0][i] = 0.5-frandom(&state);
+        v[1][i] = 0.5-frandom(&state);
+        v[2][i] = 0.5-frandom(&state);
+    }
+}
+
 export void integrate_triangles (uniform REAL step, uniform REAL lo[3], uniform REAL hi[3],
      uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3])
 {
