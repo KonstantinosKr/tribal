@@ -1,28 +1,28 @@
 #include "algo.h"
 
 export void ispc_bf (uniform unsigned int n,
-                         uniform REAL uniform pp1[3], uniform REAL uniform pp2[3], uniform REAL uniform pp3[3],
+                         uniform REAL * uniform pp1[3], uniform REAL * uniform pp2[3], uniform REAL * uniform pp3[3],
                          uniform REAL * uniform pp4[3], uniform REAL * uniform pp5[3], uniform REAL * uniform pp6[3],
-                         uniform REAL * uniform P[3], uniform REAL * uniform Q[3]) 
+                         uniform REAL * uniform P[3], uniform REAL * uniform Q[3], uniform REAL distance[]) 
 {
 
 	
   REAL u[3], v[3], nn[3][2], w[3], w0[3][6], dir[3][6], pointArray[3][6];
    
-  pointArray[0][0] = pp1[0];
-  pointArray[1][0] = pp1[1];
-  pointArray[2][0] = pp1[2];
-
-  pointArray[0][1] = pp2[0];
-  pointArray[1][1] = pp2[1];
-  pointArray[2][1] = pp2[2];
-
-  pointArray[0][2] = pp3[0];
-  pointArray[1][2] = pp3[1];
-  pointArray[2][2] = pp3[2];
-  
   foreach(i=0 ... n)
   { 
+    pointArray[0][0] = pp1[0][i];
+    pointArray[1][0] = pp1[1][i];
+    pointArray[2][0] = pp1[2][i];
+
+    pointArray[0][1] = pp2[0][i];
+    pointArray[1][1] = pp2[1][i];
+    pointArray[2][1] = pp2[2][i];
+
+    pointArray[0][2] = pp3[0][i];
+    pointArray[1][2] = pp3[1][i];
+    pointArray[2][2] = pp3[2][i];
+
     pointArray[0][3] = pp4[0][i];
     pointArray[1][3] = pp4[1][i];
     pointArray[2][3] = pp4[2][i];
@@ -46,7 +46,8 @@ export void ispc_bf (uniform unsigned int n,
     nn[0][0] = u[1]*v[2] - u[2]*v[1];
     nn[1][0] = u[2]*v[0] - u[0]*v[2];
     nn[2][0] = u[0]*v[1] - u[1]*v[0];
-    if(nn[0][0]==0 && nn[1][0]==0 && nn[2][0]==0){
+    if(nn[0][0]==0 && nn[1][0]==0 && nn[2][0]==0) {
+      distance[i] = -1; //nearly never is going to happen
       continue;
     }
     dir[0][0] = pointArray[0][1] - pointArray[0][0];
@@ -86,6 +87,7 @@ export void ispc_bf (uniform unsigned int n,
     nn[1][1] = u[2]*v[0] - u[0]*v[2];
     nn[2][1] = u[0]*v[1] - u[1]*v[0];
     if(nn[0][0]==0 && nn[1][1]==0 && nn[2][1]==0) {
+      distance[i] = -1; //nearly never is going to happen
       continue;
     }
 
@@ -125,7 +127,7 @@ export void ispc_bf (uniform unsigned int n,
         b= DOT(nn[1],dir[0]);
       }
       if (abs(b) < 1E-30 && a==0) {
-        //segment in triangle plane
+        distance[i] = 2;//segment in triangle plane
         continue;
       }
       
@@ -140,9 +142,11 @@ export void ispc_bf (uniform unsigned int n,
       Q[2][i] = P[2][i];
 
       if (r < 0.0 || r > 1.0 || r != r) {
+        distance[i] = -2;
         break;
       }
       
+      print("xxx\n");
       if(j<3){
         w[0] = P[0][i] - pointArray[0][3];
         w[1] = P[1][i] - pointArray[1][3];
@@ -156,33 +160,35 @@ export void ispc_bf (uniform unsigned int n,
       REAL D = DOT(u,v)*DOT(u,v) - DOT(u,u)*DOT(v,v);
       REAL s = (DOT(u,v)*DOT(w,v) - DOT(v,v)*DOT(w,u))/D;
       if (s<0.0 || s>1.0) {
+        distance[i] = -1;
         break;
       }
       
       REAL t = (DOT(u,v)*DOT(w,u) - DOT(u,u)*DOT(w,v))/D;
       if (t<0.0 || (s+t)>1.0) 
       {
+        distance[i] = -1;
         break;
       }
       
-      //seg in triangle
+      distance[i] = 0; //seg in triangle
       continue;
     }
 
 
       REAL a[9], b[9], c[9], d[9], e[9], f[9], p1[3], p2[3], p3[3], p4[3], p5[3], p6[3];
 
-      p1[0] = pp1[0];
-      p1[1] = pp1[1];
-      p1[2] = pp1[2];
+      p1[0] = pp1[0][i];
+      p1[1] = pp1[1][i];
+      p1[2] = pp1[2][i];
 
-      p2[0] = pp2[0];
-      p2[1] = pp2[1];
-      p2[2] = pp2[2];
+      p2[0] = pp2[0][i];
+      p2[1] = pp2[1][i];
+      p2[2] = pp2[2][i];
 
-      p3[0] = pp3[0];
-      p3[1] = pp3[1];
-      p3[2] = pp3[2];
+      p3[0] = pp3[0][i];
+      p3[1] = pp3[1][i];
+      p3[2] = pp3[2][i];
 
       p4[0] = pp4[0][i];
       p4[1] = pp4[1][i];
@@ -475,6 +481,8 @@ export void ispc_bf (uniform unsigned int n,
         }
       }
 
+      distance[i] = ssmin;
+
       P[0][i] = p2[0] + (p1[0] - p2[0]) * ssc;
       P[1][i] = p2[1] + (p1[1] - p2[1]) * ssc;
       P[2][i] = p2[2] + (p1[2] - p2[2]) * ssc;
@@ -710,6 +718,12 @@ export void ispc_bf (uniform unsigned int n,
         ss = s;
         tt = t; 
       }
+    }
+    if(ptmin < ssmin) {
+      distance[i] = ptmin;
+    } else
+    {
+      continue;
     }
     
     switch(id)

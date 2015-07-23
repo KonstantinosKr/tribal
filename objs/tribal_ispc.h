@@ -24,6 +24,7 @@ extern "C" {
     extern void generate_triangles_and_velocities(double * lo, double * hi, int32_t nt, double * t[][3], double *  * v, uint32_t * tid, uint32_t * pid);
     extern void generate_velocities(double * lo, double * hi, int32_t nt, double *  * v);
     extern void integrate_triangles(double step, double * lo, double * hi, int32_t nt, double * t[][3], double *  * v);
+    extern void scale_triangles(double * lo, double * hi, int32_t nt, double * t[][3]);
 #if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)
 } /* end extern C */
 #endif // __cplusplus

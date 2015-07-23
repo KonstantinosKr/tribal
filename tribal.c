@@ -441,8 +441,8 @@ int main (int argc, char **argv)
   REAL *d; /*distance */
   REAL *p[3],*q[3];
   unsigned int *tid; /* triangle identifiers */
-  REAL lo[3] = {-1000, -1000, -1000}; /* lower corner */
-  REAL hi[3] = {1000, 1000, 1000}; /* upper corner */
+  REAL lo[3] = {-250, -250, -250}; /* lower corner */
+  REAL hi[3] = {250, 250, 250}; /* upper corner */
   unsigned int nt; /* number of triangles */
   int *rank; /* migration ranks */
   unsigned int *pid; /*particle identifier */
@@ -483,6 +483,7 @@ int main (int argc, char **argv)
     
     nt = load_pointsVTK(t, tid);
     generate_velocities(lo, hi, nt, v);
+    //scale_triangles(lo, hi, nt, t);
   }
   else
   {
@@ -517,47 +518,40 @@ int main (int argc, char **argv)
   struct loba *lb = loba_create (ZOLTAN_RCB);
 
   /* perform time stepping */
-  REAL step = 1E-1, time; unsigned int timesteps=0;
+  REAL step = 1E-3, time; unsigned int timesteps=0;
   
-  for (time = 0.0; time < 50.0; time += step)
-  //for(time = 0; time < 20; time++)
+  for (time = 0.0; time < 1.0; time += step)
+  //for(time = 0; time < 2; time++)
   {
-    /*loba_balance (lb, nt, t[0], tid, 1.1,
+    loba_balance (lb, nt, t[0], tid, 1.1,
                   &num_import, &import_procs, 
                   &num_export, &export_procs, 
                   &import_global_ids, &import_local_ids, 
                   &export_global_ids, &export_local_ids);
-    */
       
-    //printf("RANK[%i]:num_import:%d\n", myrank, num_import);
-    //printf("RANK[%i]:num_export:%d\n", myrank, num_export);
+    printf("RANK[%i]:num_import:%d\n", myrank, num_import);
+    printf("RANK[%i]:num_export:%d\n", myrank, num_export);
    
     for(int i = 0; i < nt; i++)
-    {
-      //printf("Before - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
-    }
+      printf("Before - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
    
-    //migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids);
+    migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids);
     
-    //printf("RANK[%i]:NT:%i\n\n\n\n", myrank, nt);
+    printf("RANK[%i]:NT:%i\n\n", myrank, nt);
     
-    //contact_distance(nt, t, p, q, d);
+    contact_distance(nt, t, p, q, d);
       
     for(int i = 0; i < nt; i++)
-    {
-      //printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
-    }
+      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
       
-      if(myrank == 0)
-          write_pointsVTK(nt, t, v, timesteps);
+    //  if(myrank == 0)
+    //      write_pointsVTK(nt, t, v, timesteps);
     
-    integrate_triangles (step, lo, hi, nt, t, v);
+    if(time > step*5)
+      integrate_triangles (step, lo, hi, nt, t, v);
       
     timesteps++;
   }
-  
-  if(myrank == 0)
-  //write_pointsVTK(nt, t, v, timesteps);
 
   /* finalise */
   loba_destroy (lb);

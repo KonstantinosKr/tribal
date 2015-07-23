@@ -69,10 +69,38 @@ export void generate_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform
 
     foreach (i = 0 ... nt)
     {
-        v[0][i] = 0.5-frandom(&state);
-        v[1][i] = 0.5-frandom(&state);
-        v[2][i] = 0.5-frandom(&state);
+        v[0][i] = hi[0] * frandom(&state);
+        v[1][i] = hi[1] * frandom(&state);
+        v[2][i] = hi[2] * frandom(&state);
     }
+}
+
+export void scale_triangles (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform t[3][3])
+{
+  struct RNGState state;
+
+  int seed = 0;
+
+  while (rdrand (&seed) == false);
+
+  seed_rng (&state, seed);
+
+  uniform REAL scale = 1.0/pow(nt,1./3.);
+
+  foreach (i = 0 ... nt)
+  {
+    t[0][0][i] = t[0][0][i]*(hi[0]-lo[0]) * scale;
+    t[0][1][i] = t[0][1][i]*(hi[1]-lo[1]) * scale;
+    t[0][2][i] = t[0][2][i]*(hi[2]-lo[2]) * scale;
+
+    t[1][0][i] = t[1][0][i]*(hi[0]-lo[0]) * scale;
+    t[1][1][i] = t[1][1][i]*(hi[1]-lo[1]) * scale;
+    t[1][2][i] = t[1][2][i]*(hi[2]-lo[2]) * scale;
+
+    t[2][0][i] = t[2][0][i]*(hi[0]-lo[0]) * scale;
+    t[2][1][i] = t[2][1][i]*(hi[1]-lo[1]) * scale;
+    t[2][2][i] = t[2][2][i]*(hi[2]-lo[2]) * scale;
+  }
 }
 
 export void integrate_triangles (uniform REAL step, uniform REAL lo[3], uniform REAL hi[3],
