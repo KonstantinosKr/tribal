@@ -124,87 +124,6 @@ void write_pointsVTK(unsigned int nt, REAL *t[3][3], REAL *v[3], unsigned int ti
     }
 }
 
-void migrate_status(int myrank, unsigned int nt, REAL *t[3][3], unsigned int timesteps, int num_import, int *import_procs, int num_export, int *export_procs, unsigned int *export_local_id) 
-{  
-  /*
-  if(myrank != 0)
-  {
-    //send import and export to rank0   
-    MPI_Send(&num_import, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-    MPI_Send(&num_export, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); 
-    MPI_Send(&nt, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
-  } else if(myrank == 0)
-  {
-    int **nparticle, **import, **export;
-    ERRMEM (nparticle = (int **) malloc(timesteps * sizeof(int *)));
-    ERRMEM (import = (int **) malloc(timesteps * sizeof(int *)));
-    ERRMEM (export = (int **) malloc(timesteps * sizeof(int *)));
-        
-    for(unsigned int i=0;i<timesteps;i++)
-    {
-      ERRMEM (nparticle[i] = (int *) malloc(num_lid_entries * sizeof(REAL))); 
-      ERRMEM (import[i] = (int *) malloc(num_lid_entries * sizeof(REAL)));
-      ERRMEM (export[i] = (int *) malloc(num_lid_entries * sizeof(REAL)));
-    }
-    
-    int nnodes;
-    MPI_Comm_size(MPI_COMM_WORLD, &nnodes);
-    for(unsigned int i=0;i<timesteps;i++)
-    {
-      for(int j=0;j<nnodes;j++)
-      {
-        if(j != 0)
-        {
-          int rank_import, rank_export, nn;
-          //receive import and export;
-          MPI_Recv(&rank_import, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          MPI_Recv(&rank_export, 1, MPI_INT, j, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-          MPI_Recv(&nn, 1, MPI_INT, j, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-          nparticle[i][j] = nn;
-          import[i][j] = rank_import;
-          export[i][j] = rank_export;
-        }
-        else
-        {
-          nparticle[i][j] = nt;
-          import[i][j] = num_import;
-          export[i][j] = num_export;
-        }
-      }
-    }
-  
-    FILE *fp = fopen("mpi.csv", "w+");
-    
-    for(int i=0;i<nnodes;i++)
-    {
-      fprintf(fp,"ID, nt[%u], imp[%u], exp[%u]", i, i, i);
-      if(i!=nnodes-1)
-      {
-        fprintf(fp,", ");
-      }
-    }
-    fprintf(fp,"\n");
-    
-    //replace with time/step for all timesteps
-    for(unsigned int i=0;i<timesteps;i++)
-    { 
-      for(int j=0;j<nnodes;j++)
-      {
-        if(j == nnodes-1)
-        { 
-          fprintf(fp,"%u, %i, %i, %i\n", i, nparticle[i][j], import[i][j], export[i][j]);
-        }
-        else
-        {
-          fprintf(fp,"%u, %i, %i, %i, ", i, nparticle[i][j], import[i][j], export[i][j]);
-        }
-      }
-    } 
-    fclose(fp); 
-  }*/
-}
-
 /* migrate triangles "in-place" to new ranks */
 static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3], REAL *v[3],  
                               REAL *p[3], REAL *q[3], unsigned int *tid, unsigned int *pid,  
@@ -464,7 +383,7 @@ int main (int argc, char **argv)
     size = 10*nt;
 
     for (int i = 0; i < 3; i ++)
-    {
+    { 
       ERRMEM (t[0][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[1][i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (t[2][i] = (REAL *) malloc (sizeof(REAL[size])));
@@ -473,7 +392,7 @@ int main (int argc, char **argv)
       ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
     }
-    ERRMEM (d = (REAL *) malloc (nt * nt * sizeof(REAL)));
+    ERRMEM (d = (REAL *) malloc (sizeof(REAL[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     
@@ -492,7 +411,7 @@ int main (int argc, char **argv)
 
     /* buffers */
     if (argc > 1) size = atoi (argv[1])*4;
-    else size = 1000000*4;
+    else size = 1000*4;
 
     for (int i = 0; i < 3; i ++)
     {
@@ -504,7 +423,7 @@ int main (int argc, char **argv)
       ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
     }
-    ERRMEM (d = (REAL *) malloc (size * size * sizeof(REAL)));
+    ERRMEM (d = (REAL*) malloc (sizeof(REAL[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
       
@@ -523,6 +442,7 @@ int main (int argc, char **argv)
   for (time = 0.0; time < 1.0; time += step)
   //for(time = 0; time < 2; time++)
   {
+    printf("timestep: %i\n", timesteps);
     loba_balance (lb, nt, t[0], tid, 1.1,
                   &num_import, &import_procs, 
                   &num_export, &export_procs, 
@@ -533,30 +453,27 @@ int main (int argc, char **argv)
     printf("RANK[%i]:num_export:%d\n", myrank, num_export);
    
     for(int i = 0; i < nt; i++)
-      printf("Before - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
+      printf("Before - RANK[%i]: tid = %i, t[0][0][i] = %f\n", myrank, tid[i], t[0][0][i]);
    
     migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids);
-    
-    printf("RANK[%i]:NT:%i\n\n", myrank, nt);
     
     contact_distance(nt, t, p, q, d);
       
     for(int i = 0; i < nt; i++)
-      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, p[0] = %f\n", myrank, tid[i], t[0][0][i], p[0][i]);
-      
-    //  if(myrank == 0)
-    //      write_pointsVTK(nt, t, v, timesteps);
+      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, distance[i] = %f\n", myrank, tid[i], t[0][0][i], d[i]);
+
+    write_pointsVTK(nt, t, v, timesteps);
     
-    if(time > step*5)
-      integrate_triangles (step, lo, hi, nt, t, v);
+    integrate_triangles (step, lo, hi, nt, t, v);
       
     timesteps++;
   }
-
+  
+  printf("finished\n");
   /* finalise */
   loba_destroy (lb);
 
-  for (int i = 0; i < 2; i ++)
+  for (int i = 0; i < 3; i ++)
   {
     free (t[0][i]);
     free (t[1][i]);
@@ -566,6 +483,8 @@ int main (int argc, char **argv)
     free (q[i]);
   }
 
+  free (distance);
+  
   Zoltan_LB_Free_Data (&import_global_ids, &import_local_ids, &import_procs, &export_global_ids, &export_local_ids, &export_procs);
   
   MPI_Finalize ();

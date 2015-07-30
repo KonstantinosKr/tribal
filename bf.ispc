@@ -358,7 +358,7 @@ export void ispc_bf (uniform unsigned int n,
         REAL tD = D;
         REAL sN = 0, tN = 0; 
      
-        REAL SMALL_NUM = 0.0000001;
+        REAL SMALL_NUM = 1E-30;
         
         // compute the line parameters of the two closest points
         if (D < SMALL_NUM)
@@ -711,6 +711,11 @@ export void ispc_bf (uniform unsigned int n,
         tt = t; 
       }
     }
+    if(ptmin > ssmin)
+    {
+       continue;
+    }
+
     
     switch(id)
     {
