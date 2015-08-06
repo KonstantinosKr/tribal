@@ -29,7 +29,10 @@ void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id
 
 
 /* find ranks overlapped by the [lo,hi] box */
-void loba_query (struct loba *lb, int node, REAL lo[3], REAL hi[3], int *nranks, int *ranks);
+void loba_query (struct loba *lb, int node, REAL lo[3], REAL hi[3], int *ranks, int *nranks);
+
+
+void loba_getbox (struct loba *lb, int part, int *ndim, REAL lo[3], REAL hi[3]);
 
 /* free load balancer */
 void loba_destroy (struct loba *lb);

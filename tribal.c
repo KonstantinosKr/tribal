@@ -357,7 +357,7 @@ int main (int argc, char **argv)
 {
   REAL *t[3][3]; /* triangles */
   REAL *v[3]; /* velocities */
-  REAL *d; /*distance */
+  REAL *distance; /*distance */
   REAL *p[3],*q[3];
   unsigned int *tid; /* triangle identifiers */
   REAL lo[3] = {-250, -250, -250}; /* lower corner */
@@ -392,7 +392,7 @@ int main (int argc, char **argv)
       ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
     }
-    ERRMEM (d = (REAL *) malloc (sizeof(REAL[size])));
+    ERRMEM (distance = (REAL *) malloc (sizeof(REAL[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     
@@ -423,7 +423,7 @@ int main (int argc, char **argv)
       ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
       ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
     }
-    ERRMEM (d = (REAL*) malloc (sizeof(REAL[size])));
+    ERRMEM (distance = (REAL*) malloc (sizeof(REAL[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
       
@@ -439,8 +439,8 @@ int main (int argc, char **argv)
   /* perform time stepping */
   REAL step = 1E-3, time; unsigned int timesteps=0;
   
-  for (time = 0.0; time < 1.0; time += step)
-  //for(time = 0; time < 2; time++)
+  //for (time = 0.0; time < 1.0; time += step)
+  for(time = 0; time < 2; time++)
   {
     printf("timestep: %i\n", timesteps);
     loba_balance (lb, nt, t[0], tid, 1.1,
@@ -457,11 +457,18 @@ int main (int argc, char **argv)
    
     migrate_triangles (size, &nt, t, v, p, q, tid, pid, num_import, import_procs, num_export, export_procs, import_global_ids, import_local_ids, export_global_ids, export_local_ids);
     
-    contact_distance(nt, t, p, q, d);
+    contact_distance(nt, t, p, q, distance);
       
     for(int i = 0; i < nt; i++)
-      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, distance[i] = %f\n", myrank, tid[i], t[0][0][i], d[i]);
+      printf("After - RANK[%i]: tid = %i, t[0][0][i] = %f, distance[i] = %f\n", myrank, tid[i], t[0][0][i], distance[i]);
 
+
+    int ndim, part = 0;
+    if(myrank==0)
+    {
+      loba_getbox(lb, part, &ndim, lo, hi);
+      printf("xmin:%f, ymin:%f, zmin:%f\n xmax:%f, ymax:%f, zmax:%f\n", lo[0], lo[1], lo[2], hi[0], hi[1], hi[2]);
+    }
     write_pointsVTK(nt, t, v, timesteps);
     
     integrate_triangles (step, lo, hi, nt, t, v);
