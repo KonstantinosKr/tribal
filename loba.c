@@ -383,15 +383,38 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
     }
   }
 
+  MPI_Request *myRequest; 
   for(int i=0; i<nNeighbors; i++)
   {
+    /*
+    //Asychronous Communication
+    myRequest = malloc(sizeof(MPI_Request)); 
+    int j = neighborhood[i];
+    MPI_Isend(&pivot[j], 1, MPI_INT, j, 1, MPI_COMM_WORLD, myRequest); 
+    //MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    free(myRequest);
+    
+    myRequest = malloc(sizeof(MPI_Request)); 
+    MPI_Isend(&send_idx[j][0], pivot[j], MPI_INT, j, 2, MPI_COMM_WORLD, myRequest);
+    //MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    free(myRequest);
+    
+    MPI_Irecv(&rcvpivot[j], 1, MPI_INT, j, 1, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    MPI_Irecv(&tid_buffer[j][0], rcvpivot[j], MPI_INT, j, 2, MPI_COMM_WORLD, myRequest);  
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+   */
+
+    //Non-blocking communication
+    
     int j = neighborhood[i];
     MPI_Send(&pivot[j], 1, MPI_INT, j, 1, MPI_COMM_WORLD); 
     MPI_Send(&send_idx[j][0], pivot[j], MPI_INT, j, 2, MPI_COMM_WORLD);
-
+    
     MPI_Recv(&rcvpivot[j], 1, MPI_INT, j, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     MPI_Recv(&tid_buffer[j][0], rcvpivot[j], MPI_INT, j, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);  
-   
+    
+
     for(int x=0; x<pivot[j]; x++)
     {
       printf("rcvpivot[%i]: %i, tid:%i\n", myrank, rcvpivot[j], tid_buffer[j][x]);
