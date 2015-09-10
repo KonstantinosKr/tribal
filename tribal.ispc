@@ -66,7 +66,7 @@ export void generate_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform
     while (rdrand (&seed) == false);
 
     seed_rng (&state, seed);
-
+  
     foreach (i = 0 ... nt)
     {
         v[0][i] = hi[0] * frandom(&state);

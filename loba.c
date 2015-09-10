@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <mpi.h>
+#include <float.h>
 #include "error.h"
 #include "loba.h"
 
@@ -124,7 +125,7 @@ struct loba* loba_create (enum algo al)
   {
     /* TODO */
   }
-  break;
+break;
   }
 
   lb->al = al;
@@ -161,26 +162,6 @@ void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id
     ASSERT (Zoltan_LB_Balance (lb->zoltan, &changes, &num_gid_entries, &num_lid_entries,
 	    num_import, import_global_ids, import_local_ids, import_procs,
 	    num_export, export_global_ids, export_local_ids, export_procs) == ZOLTAN_OK, "Zoltan load balancing failed");
- 
-      REAL lo[3], hi[3];
-
-      lo[0] = -100.0;
-      lo[1] = -100.0;
-      lo[2] = -100.0;
-
-      hi[0] = 1000.0;
-      hi[1] = 1000.0;
-      hi[2] = 1000.0;
-
-      int *ranks = (int *) malloc(sizeof(int[2]));
-      int nranks;
-      
-      loba_query (lb, 0, lo, hi, ranks, &nranks);
-      //for(int i=0;i<nranks;i++)
-      //{
-       // printf("rank:%i\n", ranks[i]);
-      //}
-      printf("nrank:%i\n", nranks);
   }
   break;
   case ZOLTAN_RIB:
@@ -205,13 +186,138 @@ void loba_query (struct loba *lb, int node, REAL lo[3], REAL hi[3], int *ranks, 
   }
 }
 
-void loba_getbox (struct loba *lb, int part, int *ndim, REAL lo[3], REAL hi[3])
+void loba_getAdjacent(struct loba *lb, int myrank, int *ranks, int *nprocs)
+{
+  REAL mylo[3], myhi[3], lo[3], hi[3];
+
+  loba_getbox(lb, myrank, mylo, myhi); 
+  
+  REAL mypoint[8][3];
+  REAL point[8][3];
+  
+  int isNeighbor;
+  int counter = 0;
+
+  mypoint[0][0] = mylo[0];
+  mypoint[0][1] = mylo[1];
+  mypoint[0][2] = mylo[2];
+
+  mypoint[1][0] = mylo[0];
+  mypoint[1][1] = myhi[1];
+  mypoint[1][2] = mylo[2];
+
+  mypoint[2][0] = mylo[0];
+  mypoint[2][1] = myhi[1];
+  mypoint[2][2] = myhi[2];
+
+  mypoint[3][0] = mylo[0];
+  mypoint[3][1] = mylo[1];
+  mypoint[3][2] = myhi[2]; 
+
+  mypoint[4][0] = myhi[0];
+  mypoint[4][1] = myhi[1];
+  mypoint[4][2] = myhi[2];
+
+  mypoint[5][0] = myhi[0];
+  mypoint[5][1] = mylo[1];
+  mypoint[5][2] = myhi[2];
+
+  mypoint[6][0] = myhi[0];
+  mypoint[6][1] = mylo[1];
+  mypoint[6][2] = mylo[2];
+
+  mypoint[7][0] = myhi[0];
+  mypoint[7][1] = myhi[1];
+  mypoint[7][2] = mylo[2]; 
+    
+  int nranks;
+  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+  for(int i=0; i<nranks; i++)
+  {
+    if(i == myrank) continue;
+    loba_getbox(lb, i, lo, hi); 
+    
+    point[0][0] = lo[0];
+    point[0][1] = lo[1];
+    point[0][2] = lo[2];
+
+    point[1][0] = lo[0];
+    point[1][1] = hi[1];
+    point[1][2] = lo[2];
+
+    point[2][0] = lo[0];
+    point[2][1] = hi[1];
+    point[2][2] = hi[2];
+
+    point[3][0] = lo[0];
+    point[3][1] = lo[1];
+    point[3][2] = hi[2]; 
+
+    point[4][0] = hi[0];
+    point[4][1] = hi[1];
+    point[4][2] = hi[2];
+
+    point[5][0] = hi[0];
+    point[5][1] = lo[1];
+    point[5][2] = hi[2];
+
+    point[6][0] = hi[0];
+    point[6][1] = lo[1];
+    point[6][2] = lo[2];
+
+    point[7][0] = hi[0];
+    point[7][1] = hi[1];
+    point[7][2] = lo[2]; 
+    
+    for(int j=0; j<8; j++)
+    {
+      for(int jj=0; j<8; j++)
+      {
+        for(int z=0; z<3; z++)
+        {
+          for(int zz=0; zz<3; zz++)
+          {
+            if(point[j][z] == mypoint[jj][zz])
+            {
+              isNeighbor = 1;
+            }
+          }
+        }
+      }
+    }
+    if(isNeighbor == 1)
+    {
+      ranks[counter] = i;
+      counter++;
+    }
+  }
+  *nprocs = counter;
+}
+ 
+void loba_getbox (struct loba *lb, int part, REAL lo[3], REAL hi[3])
 {
   switch (lb->al)
   {
     case ZOLTAN_RCB:
-    { 
-      Zoltan_RCB_Box(lb->zoltan, part, ndim, &lo[0], &lo[1], &lo[2], &hi[0], &hi[1], &hi[2]);  
+    {  
+      int ndim;
+      //printf("RANK[%i]:\n xmin:%g, ymin:%g, zmin:%g\n xmax:%g, ymax:%g, zmax:%g\n", part, lo[0], lo[1], lo[2], hi[0], hi[1], hi[2]);
+      Zoltan_RCB_Box(lb->zoltan, part, &ndim, &lo[0], &lo[1], &lo[2], &hi[0], &hi[1], &hi[2]);  
+  
+      for(int j = 0; j < 3; j++)
+      {
+        if(lo[j] < -FLT_MAX)
+        {
+          lo[j] = -255.;
+        } 
+        
+        if(hi[j] > FLT_MAX)
+        {
+          hi[j] = 255.;
+        } 
+      }
+      
+      //printf("RANK[%i]:\n xmin:%g, ymin:%g, zmin:%g\n xmax:%g, ymax:%g, zmax:%g\n", part, lo[0], lo[1], lo[2], hi[0], hi[1], hi[2]);
       break;
     }
     case ZOLTAN_RIB:
@@ -219,10 +325,147 @@ void loba_getbox (struct loba *lb, int part, int *ndim, REAL lo[3], REAL hi[3])
     }
   }
 }
+
+void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNeighbors, unsigned int size, unsigned int *nt, REAL *t[3][3], REAL *v[3], REAL *p[3], REAL *q[3], unsigned int *tid, unsigned int *pid)
+{
+  int nproc;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  //allocate memory for tmp buffers
+  int **send_idx, *pivot, *rcvpivot, **tid_buffer; 
+  REAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
+  tbuffer[0] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  tbuffer[1] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  tbuffer[2] = (REAL *) malloc(nproc*size*3*sizeof(REAL)); 
+  vbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  //initially there is nothing in p,q buffers
+  pbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  qbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+
+  send_idx = (int **) malloc(nproc*sizeof(int*));
+  tid_buffer = (int **) malloc(nproc*sizeof(int*));
+  pivot = (int *) malloc(nproc*sizeof(int));
+  rcvpivot = (int *) malloc(nproc*sizeof(int));
+
+  unsigned int n = *nt;
+  //prepare export buffers
+  for (unsigned int i = 0; i < nNeighbors; i++) 
+  {
+    int proc = neighborhood[i];
+     
+    pivot[proc] = 0;
+    send_idx[proc] = (int *) malloc(nproc*size*sizeof(int));
+    tid_buffer[proc] = (int *) malloc(nproc*size*sizeof(int));
+    
+    for(unsigned int j = 0; j < n; j++)
+    {
+      //set send indices and pivots for buffers
+      send_idx[proc][j] = tid[j];
+      pivot[proc]++;
+    }
+  }
+  //assign values to tmp export buffers
+  for(int i=0;i<nNeighbors;i++)//n processes to prepare buffers for
+  {
+    int proc = neighborhood[i];
+    for(unsigned int j=0;j<pivot[proc];j++)//pivot gives n number of ids to loop through
+    {
+      for(int k=0;k<3;k++)//loop through the xyz axis
+      {
+        tbuffer[0][(proc*size*3)+(j*3)+k] = t[0][k][send_idx[proc][j]]; //point 0        
+        tbuffer[1][(proc*size*3)+(j*3)+k] = t[1][k][send_idx[proc][j]]; //point 1
+        tbuffer[2][(proc*size*3)+(j*3)+k] = t[2][k][send_idx[proc][j]]; //point 2
+
+        vbuffer[(proc*size*3)+(j*3)+(k)] = v[k][send_idx[proc][j]];
+        pbuffer[(proc*size*3)+(j*3)+(k)] = p[k][send_idx[proc][j]];
+        qbuffer[(proc*size*3)+(j*3)+(k)] = q[k][send_idx[proc][j]];
+      }
+    }
+  }
+
+  for(int i=0; i<nNeighbors; i++)
+  {
+    int j = neighborhood[i];
+    MPI_Send(&pivot[j], 1, MPI_INT, j, 1, MPI_COMM_WORLD); 
+    MPI_Send(&send_idx[j][0], pivot[j], MPI_INT, j, 2, MPI_COMM_WORLD);
+
+    MPI_Recv(&rcvpivot[j], 1, MPI_INT, j, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&tid_buffer[j][0], rcvpivot[j], MPI_INT, j, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);  
+   
+    for(int x=0; x<pivot[j]; x++)
+    {
+      printf("rcvpivot[%i]: %i, tid:%i\n", myrank, rcvpivot[j], tid_buffer[j][x]);
+    }
+  }
+  
+  //prepare import buffers
+  unsigned int receive_idx = n; //set to last id
+  for(unsigned int i=0; i < nNeighbors; i++)
+  {
+    int x = neighborhood[i];
+    for(unsigned int j=0; j < rcvpivot[x]; j++)
+    {
+      tid[receive_idx] = tid_buffer[x][j]; //tids to import add them to tid
+      //printf("tid:%i\n", tid[receive_idx]);
+      receive_idx++;
+    }
+  }
+  receive_idx = *nt;
+ 
+  for(int x=0;x<nNeighbors;x++)
+  {
+    if(pivot[neighborhood[x]] > 0)
+    {//safe check
+      int i = neighborhood[x];
+      MPI_Send(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
+      MPI_Send(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
+      MPI_Send(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD);
+      
+      MPI_Send(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
+      MPI_Send(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
+      MPI_Send(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
+    }
+  }
+  
+  for(int x=0;x<nNeighbors;x++)
+  {
+    int i = neighborhood[x];
+    MPI_Recv(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    
+    MPI_Recv(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    for(unsigned int j=0;j<pivot[i];j++)
+    {
+      for(int k=0;k<3;k++)
+      {
+        t[0][k][receive_idx] = tbuffer[0][(i*size*3)+(j*3)+(k)];        
+        t[1][k][receive_idx] = tbuffer[1][(i*size*3)+(j*3)+(k)]; 
+        t[2][k][receive_idx] = tbuffer[2][(i*size*3)+(j*3)+(k)]; 
+        
+        v[k][receive_idx] = vbuffer[(i*size*3)+(j*3)+(k)];
+        p[k][receive_idx] = pbuffer[(i*size*3)+(j*3)+(k)];
+        q[k][receive_idx] = qbuffer[(i*size*3)+(j*3)+(k)];
+      }
+      receive_idx++;
+    }
+  }
+
+  for(int i=0; i<3;i++)
+  {//free memory
+    free(tbuffer[i]);
+  }
+    free(pivot);
+    free(vbuffer);
+    free(send_idx); 
+}
+
 /* free load balancer */
 void loba_destroy (struct loba *lb)
 {
   if (lb->zoltan) Zoltan_Destroy (&lb->zoltan);
-
   free (lb);
 }
