@@ -56,7 +56,7 @@ export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL 
     pid[i] = i;
   }
 }
-
+/*
 export void generate_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform v[3])
 {
     struct RNGState state;
@@ -73,7 +73,7 @@ export void generate_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform
         v[1][i] = hi[1] * frandom(&state);
         v[2][i] = hi[2] * frandom(&state);
     }
-}
+}*/
 
 export void scale_triangles (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform t[3][3])
 {
@@ -102,7 +102,7 @@ export void scale_triangles (uniform REAL lo[3], uniform REAL hi[3], uniform int
     t[2][2][i] = t[2][2][i]*(hi[2]-lo[2]) * scale;
   }
 }
-
+/*
 export void integrate_triangles (uniform REAL step, uniform REAL lo[3], uniform REAL hi[3],
      uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3])
 {
@@ -141,3 +141,4 @@ export void integrate_triangles (uniform REAL step, uniform REAL lo[3], uniform 
   }
 
 }
+*/

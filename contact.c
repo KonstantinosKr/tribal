@@ -41,7 +41,7 @@ void contact_distance (unsigned int nt, REAL *t[3][3], REAL *p[3], REAL *q[3], R
         c[z] = t[2][z][i];
       }
 
-      ispc_bf (nt, a, b, c, d, e, f, pp, qq); 
+//      ispc_bf (nt, a, b, c, d, e, f, pp, qq); 
         
       for(unsigned int x=0;x<nt;x++)
       {

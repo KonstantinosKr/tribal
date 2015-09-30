@@ -6,8 +6,9 @@
 #include <float.h>
 #include "loba.h"
 #include "error.h"
-#include "tribal_ispc.h"
+//#include "tribal_ispc.h"
 #include "contact.h"
+
 
 unsigned int load_pointsVTK(REAL *t[3][3], unsigned int tid[], REAL *mint, REAL *maxt)
 {
@@ -207,6 +208,7 @@ void write_pointsVTK(int myrank, unsigned int nt, REAL *t[3][3], REAL *v[3], REA
     fclose(fp);
 }
 
+
 void normalize(unsigned int nt, REAL *t[3][3], REAL mint, REAL maxt) 
 {  
   //range -255 to 255
@@ -296,7 +298,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
     //mark exported tid
     tid[export_local_ids[i]] = UINT_MAX;
   }
-
+  
   //assign values to tmp export buffers
   for(int i=0;i<nproc;i++)//n processes to prepare buffers for
   {
@@ -317,7 +319,6 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
         //printf("rank[%i] = tbuff[0][0]:%f, tbuff[0][1]:%f, tbuff[0][2]:%f\n", i, tbuffer[0][(i*size*3)+(j*3)+0], tbuffer[0][(i*size*3)+(j*3)+(1)], tbuffer[0][(i*size*3)+(j*3)+(2)]);
     }
   }
-
 
   /*for(int i=0;i<pivot[1];i++)
   printf("Processed - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], 
@@ -410,17 +411,65 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
 
   //printf("num_import_unique: %d\n", num_import_unique);
   //printf("num_export_unique: %d\n", num_export_unique);
-  
+ 
+  MPI_Request *myRequest;
   for(int x=0;x<num_export_unique;x++)
   {
     if(pivot[export_unique_procs[x]] > 0)
     {//safe check
       int i = export_unique_procs[x];
-      printf("RANK[%d]: send to rank %d\n", myrank, i);
+  
+      //Asychronous Communication
+      myRequest = malloc(sizeof(MPI_Request)); 
+      MPI_Isend(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, myRequest);
+      MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+      free(myRequest);
+      myRequest = malloc(sizeof(MPI_Request)); 
+      MPI_Isend(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, myRequest);
+      MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+      free(myRequest);
+      myRequest = malloc(sizeof(MPI_Request)); 
+      MPI_Isend(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, myRequest);
+      MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+      free(myRequest);
+      myRequest = malloc(sizeof(MPI_Request)); 
+      MPI_Isend(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, myRequest);  
+      MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+      free(myRequest);
+      myRequest = malloc(sizeof(MPI_Request)); 
+      MPI_Isend(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, myRequest);
+      MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+      free(myRequest);
+      myRequest = malloc(sizeof(MPI_Request)); 
+      MPI_Isend(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, myRequest);
+      MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+      free(myRequest);
+      myRequest = malloc(sizeof(MPI_Request)); 
+      MPI_Isend(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, myRequest);
+      MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+      free(myRequest);
+
+    //BLOCKING COMM
+/*      printf("RANK[%d]: send to rank %d\n", myrank, i);
       MPI_Send(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+      printf("send pivot: %i\n", pivot[i]);
+
+      printf("pivot[%i]*3:%i\n", i, pivot[i]*3);
+      printf("tbuffer[0][(i*size*3)]: %f\n", tbuffer[0][(i*size*3)]);
       MPI_Send(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
+      printf("send t1 points\n");
       MPI_Send(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
+      printf("send t2 points\n");
       MPI_Send(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD);
+      printf("send t3 points\n");
+      
+      MPI_Send(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
+      printf("send v buffer\n");
+      MPI_Send(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD);
+      printf("send p buffer\n");
+      MPI_Send(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD);
+      printf("send q buffer\n");
+  */  
       /*
       for(int j=0;j<pivot[i];j++) 
       {
@@ -430,9 +479,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
         tbuffer[2][(i*size*3)+(j*3)+(0)], tbuffer[2][(i*size*3)+(j*3)+(1)], tbuffer[2][(i*size*3)+(j*3)+(2)]);
       }
       */
-      MPI_Send(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
-      MPI_Send(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
-      MPI_Send(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD);
+
     }
   }
   receive_idx = *nt-receive_idx; // set to last id
@@ -441,11 +488,33 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
   {
     int i = import_unique_procs[x];
     printf("RANK[%d]: receive from rank %d\n", myrank, i);
-    MPI_Recv(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+   
+    myRequest = malloc(sizeof(MPI_Request)); 
+    //non-blocking
+    MPI_Irecv(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    MPI_Irecv(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    MPI_Irecv(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    MPI_Irecv(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    MPI_Irecv(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    MPI_Irecv(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+    MPI_Irecv(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, myRequest);
+    MPI_Wait(myRequest, MPI_STATUS_IGNORE);
+
+    //BLOCKING COMM 
+  /*  MPI_Recv(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     MPI_Recv(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     MPI_Recv(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     MPI_Recv(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    
+    MPI_Recv(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    */
     /*for(int j=0;j<pivot[i];j++) 
     {
         printf("RECV-BUFFER - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i],
@@ -454,9 +523,6 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
         tbuffer[2][(i*size*3)+(j*3)+(0)], tbuffer[2][(i*size*3)+(j*3)+(1)], tbuffer[2][(i*size*3)+(j*3)+(2)]);
     }
 */
-    MPI_Recv(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Recv(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Recv(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     for(unsigned int j=0;j<pivot[i];j++)
     {
@@ -481,6 +547,53 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
     free(pivot);
     free(vbuffer);
     free(send_idx); 
+}
+
+void gen_velocities (REAL lo[3], REAL hi[3], unsigned int nt, REAL * v[3])
+{
+    for(unsigned int i = 0; i < nt; i++)
+    {
+      v[0][i] = hi[0] * drand48()*2;
+      v[1][i] = hi[1] * drand48()*2;
+      v[2][i] = hi[2] * drand48()*2;
+    }
+}
+
+void integrate (REAL step, REAL lo[3], REAL hi[3], unsigned int nt, REAL * t[3][3], REAL * v[3])
+{
+    for(unsigned int i = 0; i < nt; i++)
+    {
+        t[0][0][i] += step*v[0][i];
+        t[0][1][i] += step*v[1][i];
+        t[0][2][i] += step*v[2][i];
+        t[1][0][i] += step*v[0][i];
+        t[1][1][i] += step*v[1][i];
+        t[1][2][i] += step*v[2][i];
+        t[2][0][i] += step*v[0][i];
+        t[2][1][i] += step*v[1][i];
+        t[2][2][i] += step*v[2][i];
+        
+        if (t[0][0][i] < lo[0]) v[0][i] *= -1;
+        if (t[0][1][i] < lo[1]) v[1][i] *= -1;
+        if (t[0][2][i] < lo[2]) v[2][i] *= -1;
+        if (t[0][0][i] > hi[0]) v[0][i] *= -1;
+        if (t[0][1][i] > hi[1]) v[1][i] *= -1;
+        if (t[0][2][i] > hi[2]) v[2][i] *= -1;
+        
+        if (t[1][0][i] < lo[0]) v[0][i] *= -1;
+        if (t[1][1][i] < lo[1]) v[1][i] *= -1;
+        if (t[1][2][i] < lo[2]) v[2][i] *= -1;
+        if (t[1][0][i] > hi[0]) v[0][i] *= -1;
+        if (t[1][1][i] > hi[1]) v[1][i] *= -1;
+        if (t[1][2][i] > hi[2]) v[2][i] *= -1;
+        
+        if (t[2][0][i] < lo[0]) v[0][i] *= -1;
+        if (t[2][1][i] < lo[1]) v[1][i] *= -1;
+        if (t[2][2][i] < lo[2]) v[2][i] *= -1;
+        if (t[2][0][i] > hi[0]) v[0][i] *= -1;
+        if (t[2][1][i] > hi[1]) v[1][i] *= -1;
+        if (t[2][2][i] > hi[2]) v[2][i] *= -1;
+    }
 }
 
 int main (int argc, char **argv)
@@ -512,7 +625,7 @@ int main (int argc, char **argv)
   {
     /* set nt */
     if (argc > 1) nt = atoi (argv[1]);
-    else nt = 1000000;
+    else nt = 100000;
 
     /* buffers */
     size = 10*nt;
@@ -538,8 +651,8 @@ int main (int argc, char **argv)
     REAL mint, maxt;
     nt = load_pointsVTK(t, tid, &mint, &maxt); 
     normalize(nt, t, mint, maxt); 
-    
-    generate_velocities(lo, hi, nt, v);
+   
+    gen_velocities(lo, hi, nt, v);
   }
   else
   {
@@ -548,7 +661,7 @@ int main (int argc, char **argv)
 
     /* buffers */
     if (argc > 1) size = atoi (argv[1])*4;
-    else size = 1000000*4;
+    else size = 100000*10;
 
     for (int i = 0; i < 3; i ++)
     {
@@ -577,7 +690,7 @@ int main (int argc, char **argv)
   REAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 1; time++)
+  for(time = 0; time < 100; time++)
   {
     if(myrank == 0){printf("timestep: %i\n", timesteps);}
 
@@ -595,13 +708,12 @@ int main (int argc, char **argv)
               t[0][0][i], t[0][1][i], t[0][2][i], 
               t[1][0][i], t[1][1][i], t[1][2][i], 
               t[2][0][i], t[2][1][i], t[2][2][i]);*/
-
+    
     migrate_triangles (size, &nt, t, v, p, q, tid, pid, 
                         num_import, import_procs, 
                         num_export, export_procs, 
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
-    
      
   /*for(int i = 0; i < nt; i++)
     printf("After - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], 
@@ -619,18 +731,21 @@ int main (int argc, char **argv)
 
     loba_query(lb, 0, lo, hi, rank, &nprocs);*/
     
-    loba_getAdjacent(lb, myrank, neighborhood, &nNeighbors);
-    printf("RANK[%i]: AdjacentRanks:%i\n", myrank, nNeighbors);
+    //loba_getAdjacent(lb, myrank, neighborhood, &nNeighbors);
+    //printf("RANK[%i]: AdjacentRanks:%i\n", myrank, nNeighbors);
     
-    for(int i=0;i<nNeighbors;i++){printf("RANK[%i]: Neighborhood[%i]:%i\n", myrank, i, neighborhood[i]);}
+    //for(int i=0;i<nNeighbors;i++){printf("RANK[%i]: Neighborhood[%i]:%i\n", myrank, i, neighborhood[i]);}
     
-    loba_migrateGhosts(lb, myrank, neighborhood, nNeighbors, size, &nt, t, v, p, q, tid, pid);
+    //loba_migrateGhosts(lb, myrank, neighborhood, nNeighbors, size, &nt, t, v, p, q, tid, pid);
 
-    //contact_distance(nt, t, p, q, distance);
+    //contact_distance(nt, t, p, q, distance); 
     
-    write_pointsVTK(myrank, nt, t, v, lo, hi, timesteps);
+    integrate (step, lo, hi, nt, t, v);
     
-    integrate_triangles (step, lo, hi, nt, t, v);
+    REAL mylo[3], myhi[3];
+    loba_getbox (lb, myrank, mylo, myhi);
+    
+    write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);
       
     timesteps++;
   }
