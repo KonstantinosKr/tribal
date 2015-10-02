@@ -1,4 +1,4 @@
-export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3], uniform unsigned int tid[], uniform unsigned int pid[])
+export void generate_triangles_and_velocities (uniform iREAL lo[3], uniform iREAL hi[3], uniform int nt, uniform iREAL * uniform t[3][3], uniform iREAL * uniform v[3], uniform unsigned int tid[], uniform unsigned int pid[])
 {
   struct RNGState state;
 
@@ -8,17 +8,17 @@ export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL 
 
   seed_rng (&state, seed);
 
-  uniform REAL scale = 1.0/pow(nt,1./3.);
+  uniform iREAL scale = 1.0/pow(nt,1./3.);
 
   foreach (i = 0 ... nt)
   {
-    REAL xrnd = frandom(&state);
-    REAL yrnd = frandom(&state);
-    REAL zrnd = frandom(&state);
+    iREAL xrnd = frandom(&state);
+    iREAL yrnd = frandom(&state);
+    iREAL zrnd = frandom(&state);
 
-    REAL xmul = frandom(&state)*scale;
-    REAL ymul = frandom(&state)*scale;
-    REAL zmul = frandom(&state)*scale;
+    iREAL xmul = frandom(&state)*scale;
+    iREAL ymul = frandom(&state)*scale;
+    iREAL zmul = frandom(&state)*scale;
 
     t[0][0][i] = xrnd + xmul*(hi[0]-lo[0]);
     t[0][1][i] = yrnd + ymul*(hi[1]-lo[1]);
@@ -56,8 +56,8 @@ export void generate_triangles_and_velocities (uniform REAL lo[3], uniform REAL 
     pid[i] = i;
   }
 }
-/*
-export void generate_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform v[3])
+
+export void generate_velocities (uniform iREAL lo[3], uniform iREAL hi[3], uniform int nt, uniform iREAL * uniform v[3])
 {
     struct RNGState state;
 
@@ -73,9 +73,9 @@ export void generate_velocities (uniform REAL lo[3], uniform REAL hi[3], uniform
         v[1][i] = hi[1] * frandom(&state);
         v[2][i] = hi[2] * frandom(&state);
     }
-}*/
+}
 
-export void scale_triangles (uniform REAL lo[3], uniform REAL hi[3], uniform int nt, uniform REAL * uniform t[3][3])
+export void scale_triangles (uniform iREAL lo[3], uniform iREAL hi[3], uniform int nt, uniform iREAL * uniform t[3][3])
 {
   struct RNGState state;
 
@@ -85,7 +85,7 @@ export void scale_triangles (uniform REAL lo[3], uniform REAL hi[3], uniform int
 
   seed_rng (&state, seed);
 
-  uniform REAL scale = 1.0/pow(nt,1./3.);
+  uniform iREAL scale = 1.0/pow(nt,1./3.);
 
   foreach (i = 0 ... nt)
   {
@@ -102,9 +102,9 @@ export void scale_triangles (uniform REAL lo[3], uniform REAL hi[3], uniform int
     t[2][2][i] = t[2][2][i]*(hi[2]-lo[2]) * scale;
   }
 }
-/*
-export void integrate_triangles (uniform REAL step, uniform REAL lo[3], uniform REAL hi[3],
-     uniform int nt, uniform REAL * uniform t[3][3], uniform REAL * uniform v[3])
+
+export void integrate_triangles (uniform iREAL step, uniform iREAL lo[3], uniform iREAL hi[3],
+     uniform int nt, uniform iREAL * uniform t[3][3], uniform iREAL * uniform v[3])
 {
   foreach (i = 0 ... nt)
   {
@@ -141,4 +141,4 @@ export void integrate_triangles (uniform REAL step, uniform REAL lo[3], uniform 
   }
 
 }
-*/
+

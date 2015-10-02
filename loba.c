@@ -8,7 +8,7 @@
 struct zoltan_args
 {
   unsigned int n;
-  REAL *p[3];
+  iREAL *p[3];
   unsigned int *id;
 };
 
@@ -134,7 +134,7 @@ break;
 }
 
 /* balance points up to tolerance; output migration ranks */
-void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id, REAL tol,
+void loba_balance (struct loba *lb, unsigned int n, iREAL *p[3], unsigned int *id, iREAL tol,
                     int *num_import, int **import_procs, int *num_export, int **export_procs, 
                     ZOLTAN_ID_PTR *import_global_ids, ZOLTAN_ID_PTR *import_local_ids, 
                     ZOLTAN_ID_PTR *export_global_ids, ZOLTAN_ID_PTR *export_local_ids) 
@@ -171,7 +171,7 @@ void loba_balance (struct loba *lb, unsigned int n, REAL *p[3], unsigned int *id
 }
 
 /* find ranks overlapped by the [lo,hi] box */
-void loba_query (struct loba *lb, int node, REAL lo[3], REAL hi[3], int *ranks, int *nranks)
+void loba_query (struct loba *lb, int node, iREAL lo[3], iREAL hi[3], int *ranks, int *nranks)
 {
   switch (lb->al)
   {
@@ -188,12 +188,12 @@ void loba_query (struct loba *lb, int node, REAL lo[3], REAL hi[3], int *ranks, 
 
 void loba_getAdjacent(struct loba *lb, int myrank, int *ranks, int *nprocs)
 {
-  REAL mylo[3], myhi[3], lo[3], hi[3];
+  iREAL mylo[3], myhi[3], lo[3], hi[3];
 
   loba_getbox(lb, myrank, mylo, myhi); 
   
-  REAL mypoint[8][3];
-  REAL point[8][3];
+  iREAL mypoint[8][3];
+  iREAL point[8][3];
   
   int isNeighbor;
   int counter = 0;
@@ -294,7 +294,7 @@ void loba_getAdjacent(struct loba *lb, int myrank, int *ranks, int *nprocs)
   *nprocs = counter;
 }
  
-void loba_getbox (struct loba *lb, int part, REAL lo[3], REAL hi[3])
+void loba_getbox (struct loba *lb, int part, iREAL lo[3], iREAL hi[3])
 {
   switch (lb->al)
   {
@@ -326,21 +326,21 @@ void loba_getbox (struct loba *lb, int part, REAL lo[3], REAL hi[3])
   }
 }
 
-void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNeighbors, unsigned int size, unsigned int *nt, REAL *t[3][3], REAL *v[3], REAL *p[3], REAL *q[3], unsigned int *tid, unsigned int *pid)
+void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNeighbors, unsigned int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], iREAL *p[3], iREAL *q[3], unsigned int *tid, unsigned int *pid)
 {
   int nproc;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
   //allocate memory for tmp buffers
   int **send_idx, *pivot, *rcvpivot, **tid_buffer; 
-  REAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
-  tbuffer[0] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
-  tbuffer[1] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
-  tbuffer[2] = (REAL *) malloc(nproc*size*3*sizeof(REAL)); 
-  vbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  iREAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
+  tbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  tbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
+  vbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   //initially there is nothing in p,q buffers
-  pbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
-  qbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  pbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  qbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
 
   send_idx = (int **) malloc(nproc*sizeof(int*));
   tid_buffer = (int **) malloc(nproc*sizeof(int*));

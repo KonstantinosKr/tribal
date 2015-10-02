@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with PARMES. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define DRAND() ((REAL) rand () / (REAL) RAND_MAX)
+#define DRAND() ((iREAL) rand () / (iREAL) RAND_MAX)
 
 #define MUL(a, eps, b)\
 {\
@@ -113,9 +113,9 @@ along with PARMES. If not, see <http://www.gnu.org/licenses/>.
 
 /* 4*4 solver */
 
-static void solve4 (REAL a[16], REAL b[4], REAL x[4])
+static void solve4 (iREAL a[16], iREAL b[4], iREAL x[4])
 {
-    REAL tmp;
+    iREAL tmp;
     tmp = a[1]/a[0];
     a[13] -= a[12] * tmp;
     a[9] -= a[8] * tmp;

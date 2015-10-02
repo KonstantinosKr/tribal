@@ -2,7 +2,7 @@
 C_SRC=loba.c contact.c tribal.c 
 
 # ISPC files
-ISPC_SRC=#tribal.ispc bf.ispc
+ISPC_SRC= tribal.ispc bf.ispc
 
 # ISPC targets
 ISPC_TARGETS=avx2

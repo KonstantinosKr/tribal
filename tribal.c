@@ -6,11 +6,12 @@
 #include <float.h>
 #include "loba.h"
 #include "error.h"
-//#include "tribal_ispc.h"
+#include "tribal_ispc.h"
 #include "contact.h"
 
+//using namespace ispc;
 
-unsigned int load_pointsVTK(REAL *t[3][3], unsigned int tid[], REAL *mint, REAL *maxt)
+unsigned int load_pointsVTK(iREAL *t[3][3], unsigned int tid[], iREAL *mint, iREAL *maxt)
 {
     FILE *fp1 = fopen("input.vtk", "r");
     unsigned int nt;
@@ -124,7 +125,7 @@ unsigned int load_pointsVTK(REAL *t[3][3], unsigned int tid[], REAL *mint, REAL 
     return nt;
 }
 
-void write_pointsVTK(int myrank, unsigned int nt, REAL *t[3][3], REAL *v[3], REAL lo[3], REAL hi[3], unsigned int timesteps)
+void write_pointsVTK(int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], iREAL lo[3], iREAL hi[3], unsigned int timesteps)
 {
     char iter[15];
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
@@ -209,10 +210,10 @@ void write_pointsVTK(int myrank, unsigned int nt, REAL *t[3][3], REAL *v[3], REA
 }
 
 
-void normalize(unsigned int nt, REAL *t[3][3], REAL mint, REAL maxt) 
+void normalize(unsigned int nt, iREAL *t[3][3], iREAL mint, iREAL maxt) 
 {  
   //range -255 to 255
-  REAL inv_range = 510.0/(maxt-mint);
+  iREAL inv_range = 510.0/(maxt-mint);
 
   for(unsigned int i=0; i < nt; i++)
   {
@@ -227,8 +228,8 @@ void normalize(unsigned int nt, REAL *t[3][3], REAL mint, REAL maxt)
 }
 
 /* migrate triangles "in-place" to new ranks */
-static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3], REAL *v[3],  
-                              REAL *p[3], REAL *q[3], unsigned int *tid, unsigned int *pid,  
+static void migrate_triangles (unsigned int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3],  
+                              iREAL *p[3], iREAL *q[3], unsigned int *tid, unsigned int *pid,  
                               int num_import, int *import_procs, int num_export, int *export_procs, 
                               ZOLTAN_ID_PTR import_global_ids, ZOLTAN_ID_PTR import_local_ids,
                               ZOLTAN_ID_PTR export_global_ids, ZOLTAN_ID_PTR export_local_ids)
@@ -239,14 +240,14 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
   
   //allocate memory for tmp buffers
   int **send_idx, *pivot, *tid_buffer; 
-  REAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
-  tbuffer[0] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
-  tbuffer[1] = (REAL *) malloc(nproc*size*3*sizeof(REAL));
-  tbuffer[2] = (REAL *) malloc(nproc*size*3*sizeof(REAL)); 
-  vbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  iREAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
+  tbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  tbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
+  vbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   //initially there is nothing in p,q buffers
-  pbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
-  qbuffer = (REAL *) malloc(nproc*size*3*sizeof(REAL));
+  pbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  qbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
 
   send_idx = (int **) malloc(nproc*sizeof(int*));
   pivot = (int *) malloc(nproc*sizeof(int));
@@ -549,7 +550,7 @@ static void migrate_triangles (unsigned int size, unsigned int *nt, REAL *t[3][3
     free(send_idx); 
 }
 
-void gen_velocities (REAL lo[3], REAL hi[3], unsigned int nt, REAL * v[3])
+void gen_velocities (iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * v[3])
 {
     for(unsigned int i = 0; i < nt; i++)
     {
@@ -559,7 +560,7 @@ void gen_velocities (REAL lo[3], REAL hi[3], unsigned int nt, REAL * v[3])
     }
 }
 
-void integrate (REAL step, REAL lo[3], REAL hi[3], unsigned int nt, REAL * t[3][3], REAL * v[3])
+void integrate (iREAL step, iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * t[3][3], iREAL * v[3])
 {
     for(unsigned int i = 0; i < nt; i++)
     {
@@ -598,13 +599,13 @@ void integrate (REAL step, REAL lo[3], REAL hi[3], unsigned int nt, REAL * t[3][
 
 int main (int argc, char **argv)
 {
-  REAL *t[3][3]; /* triangles */
-  REAL *v[3]; /* velocities */
-  REAL *distance; /*distance */
-  REAL *p[3],*q[3];
+  iREAL *t[3][3]; /* triangles */
+  iREAL *v[3]; /* velocities */
+  iREAL *distance; /*distance */
+  iREAL *p[3],*q[3];
   unsigned int *tid; /* triangle identifiers */
-  REAL lo[3] = {-255, -255, -255}; /* lower corner */
-  REAL hi[3] = {255, 255, 255}; /* upper corner */
+  iREAL lo[3] = {-255, -255, -255}; /* lower corner */
+  iREAL hi[3] = {255, 255, 255}; /* upper corner */
   unsigned int nt; /* number of triangles */
   int *rank; /* migration ranks */
   unsigned int *pid; /*particle identifier */
@@ -632,15 +633,15 @@ int main (int argc, char **argv)
 
     for (int i = 0; i < 3; i ++)
     { 
-      ERRMEM (t[0][i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (t[1][i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (t[2][i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (v[i] = (REAL *) malloc (sizeof(REAL[size])));
+      ERRMEM (t[0][i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (t[1][i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (t[2][i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (v[i] = (iREAL *) malloc (sizeof(iREAL[size])));
     
-      ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
+      ERRMEM (p[i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (q[i] = (iREAL *) malloc (sizeof(iREAL[size])));
     }
-    ERRMEM (distance = (REAL *) malloc (sizeof(REAL[size])));
+    ERRMEM (distance = (iREAL *) malloc (sizeof(iREAL[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     
@@ -648,7 +649,7 @@ int main (int argc, char **argv)
     
     //generate_triangles_and_velocities (lo, hi, nt, t, v, tid, pid);
     
-    REAL mint, maxt;
+    iREAL mint, maxt;
     nt = load_pointsVTK(t, tid, &mint, &maxt); 
     normalize(nt, t, mint, maxt); 
    
@@ -665,15 +666,15 @@ int main (int argc, char **argv)
 
     for (int i = 0; i < 3; i ++)
     {
-      ERRMEM (t[0][i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (t[1][i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (t[2][i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (v[i] = (REAL *) malloc (sizeof(REAL[size])));
+      ERRMEM (t[0][i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (t[1][i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (t[2][i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (v[i] = (iREAL *) malloc (sizeof(iREAL[size])));
       
-      ERRMEM (p[i] = (REAL *) malloc (sizeof(REAL[size])));
-      ERRMEM (q[i] = (REAL *) malloc (sizeof(REAL[size])));
+      ERRMEM (p[i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      ERRMEM (q[i] = (iREAL *) malloc (sizeof(iREAL[size])));
     }
-    ERRMEM (distance = (REAL*) malloc (sizeof(REAL[size])));
+    ERRMEM (distance = (iREAL*) malloc (sizeof(iREAL[size])));
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
       
@@ -687,7 +688,7 @@ int main (int argc, char **argv)
   struct loba *lb = loba_create (ZOLTAN_RCB);
 
   /* perform time stepping */
-  REAL step = 1E-3, time; unsigned int timesteps=0;
+  iREAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
   for(time = 0; time < 100; time++)
@@ -740,12 +741,12 @@ int main (int argc, char **argv)
 
     //contact_distance(nt, t, p, q, distance); 
     
-    integrate (step, lo, hi, nt, t, v);
+    //integrate_triangles (step, lo, hi, nt, t, v);
     
-    REAL mylo[3], myhi[3];
+    iREAL mylo[3], myhi[3];
     loba_getbox (lb, myrank, mylo, myhi);
     
-    write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);
+    //write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);
       
     timesteps++;
   }

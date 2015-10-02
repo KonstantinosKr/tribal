@@ -1,13 +1,13 @@
 #include "algo.h"
 
 export void ispc_bf (uniform unsigned int n,
-                         uniform REAL uniform pp1[3], uniform REAL uniform pp2[3], uniform REAL uniform pp3[3],
-                         uniform REAL * uniform pp4[3], uniform REAL * uniform pp5[3], uniform REAL * uniform pp6[3],
-                         uniform REAL * uniform P[3], uniform REAL * uniform Q[3]) 
+                         uniform iREAL uniform pp1[3], uniform iREAL uniform pp2[3], uniform iREAL uniform pp3[3],
+                         uniform iREAL * uniform pp4[3], uniform iREAL * uniform pp5[3], uniform iREAL * uniform pp6[3],
+                         uniform iREAL * uniform P[3], uniform iREAL * uniform Q[3]) 
 {
 
 	
-  REAL u[3], v[3], nn[3][2], w[3], w0[3][6], dir[3][6], pointArray[3][6];
+  iREAL u[3], v[3], nn[3][2], w[3], w0[3][6], dir[3][6], pointArray[3][6];
    
   pointArray[0][0] = pp1[0];
   pointArray[1][0] = pp1[1];
@@ -115,7 +115,7 @@ export void ispc_bf (uniform unsigned int n,
     
     for(uniform j=0;j<6;j++)
     {
-      REAL a,b;
+      iREAL a,b;
       if(j<3)
       {
         a = -DOT(nn[0], w0[0]);
@@ -129,7 +129,7 @@ export void ispc_bf (uniform unsigned int n,
         continue;
       }
       
-      REAL r = a / b;
+      iREAL r = a / b;
 
       P[0][i] = pointArray[0][j] + r * dir[0][j];
       P[1][i] = pointArray[1][j] + r * dir[1][j];
@@ -153,13 +153,13 @@ export void ispc_bf (uniform unsigned int n,
         w[2] = P[2][i] - pointArray[2][0];
       }  
             
-      REAL D = DOT(u,v)*DOT(u,v) - DOT(u,u)*DOT(v,v);
-      REAL s = (DOT(u,v)*DOT(w,v) - DOT(v,v)*DOT(w,u))/D;
+      iREAL D = DOT(u,v)*DOT(u,v) - DOT(u,u)*DOT(v,v);
+      iREAL s = (DOT(u,v)*DOT(w,v) - DOT(v,v)*DOT(w,u))/D;
       if (s<0.0 || s>1.0) {
         break;
       }
       
-      REAL t = (DOT(u,v)*DOT(w,u) - DOT(u,u)*DOT(w,v))/D;
+      iREAL t = (DOT(u,v)*DOT(w,u) - DOT(u,u)*DOT(w,v))/D;
       if (t<0.0 || (s+t)>1.0) 
       {
         break;
@@ -170,7 +170,7 @@ export void ispc_bf (uniform unsigned int n,
     }
 
 
-      REAL a[9], b[9], c[9], d[9], e[9], f[9], p1[3], p2[3], p3[3], p4[3], p5[3], p6[3];
+      iREAL a[9], b[9], c[9], d[9], e[9], f[9], p1[3], p2[3], p3[3], p4[3], p5[3], p6[3];
 
       p1[0] = pp1[0];
       p1[1] = pp1[1];
@@ -200,17 +200,17 @@ export void ispc_bf (uniform unsigned int n,
       //12-45, 12-46, 12-56 | 23-45, 23-46, 23-56 | 31-45, 31-46, 31-56.
 
       //T1.1 - T2
-      REAL u[3];
+      iREAL u[3];
       u[0] = (p1[0] - p2[0]);
       u[1] = (p1[1] - p2[1]);
       u[2] = (p1[2] - p2[2]);
       
-      REAL v[3];
+      iREAL v[3];
       v[0] = (p4[0] - p5[0]);
       v[1] = (p4[1] - p5[1]);
       v[2] = (p4[2] - p5[2]);
       
-      REAL w[3];
+      iREAL w[3];
       w[0] = (p2[0] - p5[0]);
       w[1] = (p2[1] - p5[1]);
       w[2] = (p2[2] - p5[2]);
@@ -348,17 +348,17 @@ export void ispc_bf (uniform unsigned int n,
       e[8] = DOT(v,w);
 
       
-      REAL ssmin = 1E+30, ttc, ssc;
+      iREAL ssmin = 1E+30, ttc, ssc;
         
       cfor(uniform int j=0; j<9;j++)
       {
-        REAL D = (a[j]*c[j] - b[j]*b[j]);
+        iREAL D = (a[j]*c[j] - b[j]*b[j]);
 
-        REAL sD = D;
-        REAL tD = D;
-        REAL sN = 0, tN = 0; 
+        iREAL sD = D;
+        iREAL tD = D;
+        iREAL sN = 0, tN = 0; 
      
-        REAL SMALL_NUM = 1E-30;
+        iREAL SMALL_NUM = 1E-30;
         
         // compute the line parameters of the two closest points
         if (D < SMALL_NUM)
@@ -404,7 +404,7 @@ export void ispc_bf (uniform unsigned int n,
           }
         }
 
-        REAL sc, tc; //do the division to get sc and tc
+        iREAL sc, tc; //do the division to get sc and tc
         if(abs(sN) < SMALL_NUM){
           sc = 0.0;
         }else{
@@ -417,7 +417,7 @@ export void ispc_bf (uniform unsigned int n,
           tc = tN / tD;
         } 
 
-        REAL dP[3], dist;
+        iREAL dP[3], dist;
 
         if(j==0)
         {   
@@ -528,16 +528,16 @@ export void ispc_bf (uniform unsigned int n,
     e[5] = (p6[0] - p4[0])*(p4[0] - p3[0]) + (p6[1] - p4[1])*(p4[1] - p3[1]) + (p6[2] - p4[2])*(p4[2] - p3[2]);
     f[5] = (p4[0] - p3[0])*(p4[0] - p3[0]) + (p4[1] - p3[1])*(p4[1] - p3[1]) + (p4[2] - p3[2])*(p4[2] - p3[2]);
 
-    REAL ss = 0, tt = 0;
-    REAL ptmin = 1E30;
-    REAL id=0;
+    iREAL ss = 0, tt = 0;
+    iREAL ptmin = 1E30;
+    iREAL id=0;
     cfor(uniform int j=0; j<6;j++)
     {
-      REAL det = a[j]*c[j] - b[j]*b[j]; //do we have to use abs here?
-      REAL s   = b[j]*e[j] - c[j]*d[j];
-      REAL t   = b[j]*d[j] - a[j]*e[j];
+      iREAL det = a[j]*c[j] - b[j]*b[j]; //do we have to use abs here?
+      iREAL s   = b[j]*e[j] - c[j]*d[j];
+      iREAL t   = b[j]*d[j] - a[j]*e[j];
       
-      REAL sqrDistance=0;
+      iREAL sqrDistance=0;
       
       if ((s+t) <= det)
       {
@@ -602,7 +602,7 @@ export void ispc_bf (uniform unsigned int n,
                   }
               }else {
                   // region 0
-                  REAL invDet = 1/det;
+                  iREAL invDet = 1/det;
                   s = s*invDet;
                   t = t*invDet;
                   sqrDistance = s*(a[j]*s + b[j]*t + 2*d[j]) + t*(b[j]*s + c[j]*t + 2*e[j]) + f[j];
@@ -613,11 +613,11 @@ export void ispc_bf (uniform unsigned int n,
       {
           if (s < 0){
               // region 2
-              REAL tmp0 = b[j] + d[j];
-              REAL tmp1 = c[j] + e[j];
+              iREAL tmp0 = b[j] + d[j];
+              iREAL tmp1 = c[j] + e[j];
               if (tmp1 > tmp0){ // minimum on edge s+t=1
-                  REAL numer = tmp1 - tmp0;
-                  REAL denom = a[j] - 2*b[j] + c[j];
+                  iREAL numer = tmp1 - tmp0;
+                  iREAL denom = a[j] - 2*b[j] + c[j];
                   if (numer >= denom){
                       s = 1;
                       t = 0;
@@ -645,11 +645,11 @@ export void ispc_bf (uniform unsigned int n,
           }else {
               if (t < 0) {
                   //region6
-                  REAL tmp0 = b[j] + e[j];
-                  REAL tmp1 = a[j] + d[j];
+                  iREAL tmp0 = b[j] + e[j];
+                  iREAL tmp1 = a[j] + d[j];
                   if (tmp1 > tmp0){
-                      REAL numer = tmp1 - tmp0;
-                      REAL denom = a[j]-2*b[j]+c[j];
+                      iREAL numer = tmp1 - tmp0;
+                      iREAL denom = a[j]-2*b[j]+c[j];
                       if (numer >= denom){
                           t = 1;
                           s = 0;
@@ -677,13 +677,13 @@ export void ispc_bf (uniform unsigned int n,
                   //end of region 6
               }else {
                   // region 1
-                  REAL numer = c[j] + e[j] - b[j] - d[j];
+                  iREAL numer = c[j] + e[j] - b[j] - d[j];
                   if (numer <= 0){
                       s = 0;
                       t = 1;
                       sqrDistance = c[j] + 2*e[j] + f[j];
                   }else {
-                      REAL denom = a[j] - 2*b[j] + c[j];
+                      iREAL denom = a[j] - 2*b[j] + c[j];
                       if (numer >= denom){
                           s = 1;
                           t = 0;
@@ -701,7 +701,7 @@ export void ispc_bf (uniform unsigned int n,
       // account for numerical round-off error
       if (sqrDistance < 0){sqrDistance = 0;}
 
-      REAL tq[3], dist;
+      iREAL tq[3], dist;
 
       dist = sqrt(sqrDistance);
       if(dist<ptmin)

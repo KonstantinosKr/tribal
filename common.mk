@@ -2,9 +2,9 @@ TASK_CPP_OBJ=tasksys.o
 TASK_LIB=-lpthread
 
 ifeq ($(REAL),double)
-  REAL=-DREAL=double
+  REAL=-DiREAL=double
 else
-  REAL=-DREAL=float
+  REAL=-DiREAL=float
 endif
 
 ifeq ($(DEBUG),yes)

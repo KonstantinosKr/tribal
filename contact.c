@@ -5,19 +5,19 @@
 #include "math.h"
 
 
-void contact_distance (unsigned int nt, REAL *t[3][3], REAL *p[3], REAL *q[3], REAL *distance)
+void contact_distance (unsigned int nt, iREAL *t[3][3], iREAL *p[3], iREAL *q[3], iREAL *distance)
 {
 
-    REAL *d[3], *e[3], *f[3];
-    REAL *pp[3], *qq[3];
+    iREAL *d[3], *e[3], *f[3];
+    iREAL *pp[3], *qq[3];
 
     for(int i=0;i<3;i++)
     {
-      d[i] = (REAL *) malloc(nt * sizeof(REAL));
-      e[i] = (REAL *) malloc(nt * sizeof(REAL));
-      f[i] = (REAL *) malloc(nt * sizeof(REAL));
-      pp[i] = (REAL *) malloc(nt * sizeof(REAL));
-      qq[i] = (REAL *) malloc(nt * sizeof(REAL));
+      d[i] = (iREAL *) malloc(nt * sizeof(iREAL));
+      e[i] = (iREAL *) malloc(nt * sizeof(iREAL));
+      f[i] = (iREAL *) malloc(nt * sizeof(iREAL));
+      pp[i] = (iREAL *) malloc(nt * sizeof(iREAL));
+      qq[i] = (iREAL *) malloc(nt * sizeof(iREAL));
     }
     
     for(unsigned int i=0;i<nt;i++)
@@ -30,7 +30,7 @@ void contact_distance (unsigned int nt, REAL *t[3][3], REAL *p[3], REAL *q[3], R
       }
     }
     
-    REAL a[3], b[3], c[3];
+    iREAL a[3], b[3], c[3];
 
     for(unsigned int i=0;i<nt;i++)
     { 
