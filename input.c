@@ -2,7 +2,7 @@
 
 unsigned int load_pointsVTK(iREAL *t[3][3], unsigned int tid[], iREAL *mint, iREAL *maxt)
 {
-    FILE *fp1 = fopen("input.vtk", "r");
+    FILE *fp1 = fopen("input/input.vtk", "r");
     unsigned int nt;
     if( fp1 == NULL )
     {

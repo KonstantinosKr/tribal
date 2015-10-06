@@ -4,19 +4,31 @@
 #include <string.h>
 #include <float.h>
 #include <iostream>
-#define nranks 4
+#define nranks 2
 #define timesteps 100
+#define size 1000000
 
 int main()
 {
+  double *point[3];
+  int *cells[5];
+
+  for(int i=0; i<3; i++)
+  {
+    point[i] = (double*) malloc(sizeof(double[size]));
+  }
+
+  for(int i=0; i<5; i++)
+  {
+    cells[i] = (int*) malloc(sizeof(int[size]));
+  }
+  
   for(int ii=0; ii<timesteps; ii++)
   { 
     unsigned int nt = 0;
     unsigned int n = 0;
     unsigned int cellnt = 0;
     unsigned int celldx = 0;
-    double point[3][100000];
-    int cells[5][100000];
 
     //readin vtks from every rank
     for(int j=0; j<nranks; j++)

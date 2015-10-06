@@ -4,7 +4,7 @@ void write_pointsVTK(int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], i
 {
     char iter[15];
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
-    char filename[50] = "output/output"; //care or buffer overflow
+    char filename[50] = "output/mpi/output"; //care or buffer overflow
     strcat(filename, iter);
     printf("%s\n", filename);
       
