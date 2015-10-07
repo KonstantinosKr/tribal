@@ -4,6 +4,7 @@
 #include <float.h>
 #include "error.h"
 #include "loba.h"
+#include "contact.h"
 
 struct zoltan_args
 {
@@ -324,7 +325,7 @@ void loba_getbox (struct loba *lb, int part, iREAL lo[3], iREAL hi[3])
   }
 }
 
-void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNeighbors, unsigned int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], iREAL *p[3], iREAL *q[3], unsigned int *tid, unsigned int *pid)
+void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNeighbors, unsigned long long int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], iREAL *p[3], iREAL *q[3], iREAL *distance, unsigned int *tid, unsigned int *pid)
 {
   int nproc;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -362,8 +363,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
       pivot[proc]++;
     }
   }
-
-  printf("passed prepare for export buffers\n");
 
   //assign values to tmp export buffers
   for(int i=0;i<nNeighbors;i++)//n processes to prepare buffers for
@@ -449,6 +448,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
     }
   }
   
+  //contact_distance(*nt, t, p, q, distance); 
   for(int x=0;x<nNeighbors;x++)
   {
     MPI_Wait(&myrvRequest[(x*7)+1], MPI_STATUS_IGNORE);

@@ -5,7 +5,7 @@
 #include <float.h>
 #include <iostream>
 #define nranks 2
-#define timesteps 100
+#define timesteps 2
 #define size 1000000
 
 int main()
@@ -34,7 +34,7 @@ int main()
     for(int j=0; j<nranks; j++)
     {
       char ch, word[100];
-      char filename[100] = "output";
+      char filename[100] = "mpi/output";
       char str[100];
       sprintf(str, "%i_%i.vtk", ii, j);
       strcat(filename, str);
@@ -63,7 +63,7 @@ int main()
               point[1][i] = atof(word);
               ch = fscanf(fp, "%s", word);
               point[2][i] = atof(word);
-              printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
+              //printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
             }
           }
           
