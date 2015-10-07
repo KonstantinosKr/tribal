@@ -131,7 +131,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
           t[0][k][export_local_ids[i]] = t[0][k][j];
           t[1][k][export_local_ids[i]] = t[1][k][j];
           t[2][k][export_local_ids[i]] = t[2][k][j];
-//          printf("EXECUTED:t[2][i][local_id]:%f\n", t[2][k][export_local_ids[i]]);
+          
           v[k][export_local_ids[i]] = v[k][j]; 
           p[k][export_local_ids[i]] = p[k][j]; 
           q[k][export_local_ids[i]] = q[k][j];
@@ -190,17 +190,6 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     receive_idx++;//increase receive index
   }
 
-  printf("RANK[%i]: NUM_IMPORT:%i\n", myrank, num_import);
-  printf("RANK[%i]: NUM_EXPORT:%i\n", myrank, num_export);
-  for(int i=0;i < num_import;i++)
-  {
-    printf("%d:RANK[%d] - import_ID:%d, local_id:%d\n", i, myrank, import_procs[i], import_global_ids[i]);
-  }
-  for(int i=0;i < num_export;i++)
-  {
-    printf("%d:RANK[%d] - export_ID:%d, local_id:%d\n", i, myrank, export_procs[i], export_global_ids[i]);
-  }
-  
   if(*nt > 0 && num_export > 0) 
   {
     receive_idx = *nt - num_export; //set to last id
@@ -240,7 +229,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   {
     int i = export_unique_procs[x];
   
-    printf("RANK[%d]: send to rank %d\n", myrank, i);
+    //printf("RANK[%d]: send to rank %d\n", myrank, i);
     //Asychronous Communication
     MPI_Isend(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myRequest[(x*7)+1]);
     MPI_Isend(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myRequest[(x*7)+2]);
@@ -393,41 +382,30 @@ int main (int argc, char **argv)
   /* perform time stepping */
   iREAL step = 1E-3, time; unsigned int timesteps=0;
   
-  //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 2; time++)
+  for (time = 0.0; time < 1.0; time += step)
+  //for(time = 0; time < 2; time++)
   {
-    if(myrank == 0){printf("\n\n\n\n\nTIMESTEP: %i\n\n\n\n", timesteps);}
+    if(myrank == 0){printf("\nTIMESTEP: %i\n", timesteps);}
 
     loba_balance (lb, nt, t[0], tid, 1.1,
                   &num_import, &import_procs, 
                   &num_export, &export_procs, 
                   &import_global_ids, &import_local_ids, 
                   &export_global_ids, &export_local_ids);
-    printf("passed load balance\n");
     
-    if(time>0)
-    for(int i = 0; i < nt+1; i++)
-    {
-      printf("Before - RANK[%i]: tid = %i\nt[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f,\nt[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f,\nt[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
-    }
-
     migrate_triangles (size, &nt, t, v, p, q, tid, pid, 
                         num_import, import_procs, 
                         num_export, export_procs, 
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
-    if(time>0)
-    for(int i = 0; i < nt; i++)
-    {
-      printf("After - RANK[%i]: tid = %i\nt[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f,\nt[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f,\nt[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i],t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
-    }
 
     //printf("passed migration\n");
-    //loba_getAdjacent(lb, myrank, neighborhood, &nNeighbors);
-    //loba_migrateGhosts(lb, myrank, neighborhood, nNeighbors, size, &nt, t, v, p, q, distance, tid, pid);
+    loba_migrateGhosts(lb, myrank, neighborhood, nNeighbors, size, &nt, t, v, p, q, distance, tid, pid);
     
     //printf("passed ghosts migration\n"); 
-    //integrate (step, lo, hi, nt, t, v);
+    
+    integrate (step, lo, hi, nt, t, v);
+    
     loba_getbox (lb, myrank, mylo, myhi);//get local subdomain boundary box
     
     write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);

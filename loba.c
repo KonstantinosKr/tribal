@@ -346,6 +346,9 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
   pivot = (int *) malloc(nproc*sizeof(int));
   rcvpivot = (int *) malloc(nproc*sizeof(int));
 
+
+  loba_getAdjacent(lb, myrank, neighborhood, &nNeighbors);
+
   unsigned int n = *nt;
   //prepare export buffers
   for (unsigned int i = 0; i < nNeighbors; i++) 
@@ -416,7 +419,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
     }
   }
   receive_idx = *nt;
-
  
   for(int x=0;x<nNeighbors;x++)
   { 
@@ -448,7 +450,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
     }
   }
   
-  //contact_distance(*nt, t, p, q, distance); 
+  contact_distance(*nt, t, p, q, distance); 
   for(int x=0;x<nNeighbors;x++)
   {
     MPI_Wait(&myrvRequest[(x*7)+1], MPI_STATUS_IGNORE);

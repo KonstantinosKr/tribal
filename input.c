@@ -17,7 +17,7 @@ unsigned int load_pointsVTK(iREAL *t[3][3], unsigned int tid[], iREAL *mint, iRE
         ch = fscanf(fp1,"%s",word);
         if(strcmp(word, "POINTS")==0)
         {
-            printf("found!\n");
+            //printf("found!\n");
             ch = fscanf(fp1,"%s",word);
             unsigned int n = atoi(word);
             //get points
@@ -37,7 +37,7 @@ unsigned int load_pointsVTK(iREAL *t[3][3], unsigned int tid[], iREAL *mint, iRE
                 point[1][i] = atof(word);
                 ch = fscanf(fp1, "%s", word);
                 point[2][i] = atof(word);
-                printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
+                //printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
                 
                 if(point[0][i] < *mint) 
                 {
