@@ -303,7 +303,6 @@ int main (int argc, char **argv)
   unsigned int *pid; /*particle identifier */
   unsigned int size; /* ranks size */
   int nprocs;
-  int nNeighbors=0;
   int myrank;
 
   /* init */ 
@@ -311,9 +310,7 @@ int main (int argc, char **argv)
 
   MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  
-  int *neighborhood = (int *) malloc(sizeof(int[nprocs]));
-  
+   
   if (myrank == 0)
   {
     /* set nt */
@@ -399,10 +396,11 @@ int main (int argc, char **argv)
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
 
-    //printf("passed migration\n");
-    loba_migrateGhosts(lb, myrank, neighborhood, nNeighbors, size, &nt, t, v, p, q, distance, tid, pid);
+    printf("passed migration\n");
     
-    //printf("passed ghosts migration\n"); 
+    loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
+    
+    printf("passed ghosts migration\n"); 
     
     integrate (step, lo, hi, nt, t, v);
     

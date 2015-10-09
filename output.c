@@ -4,15 +4,20 @@ void write_pointsVTK(int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], i
 {
     char iter[15];
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
-    char filename[50] = "output/mpi/output"; //care or buffer overflow
+    char filename[100] = "output/mpi/output"; //care or buffer overflow
     strcat(filename, iter);
     printf("%s\n", filename);
       
     FILE *fp = fopen(filename, "w+");
-      
+    if( fp == NULL )
+    {
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+    
     fprintf(fp,"# vtk DataFile Version 2.0\nOutput vtk file\nASCII\n\nDATASET UNSTRUCTURED_GRID\nPOINTS %i float\n", (nt*3)+8);
       
-    unsigned i;
+    unsigned int i;
     for(i = 0; i < nt; i++)
     {
       fprintf(fp,"%.5f %.5f %.5f\n%.5f %.5f %.5f\n%.5f %.5f %.5f\n", t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
