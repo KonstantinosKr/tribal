@@ -229,7 +229,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   {
     int i = export_unique_procs[x];
   
-    //printf("RANK[%d]: send to rank %d\n", myrank, i);
+    printf("RANK[%d]: send to rank %d\n", myrank, i);
     //Asychronous Communication
     MPI_Isend(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myRequest[(x*7)+1]);
     MPI_Isend(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myRequest[(x*7)+2]);
@@ -382,8 +382,8 @@ int main (int argc, char **argv)
   /* perform time stepping */
   iREAL step = 1E-3, time; unsigned int timesteps=0;
   
-  for (time = 0.0; time < 1.0; time += step)
-  //for(time = 0; time < 2; time++)
+  //for (time = 0.0; time < 1.0; time += step)
+  for(time = 0; time < 100; time++)
   {
     if(myrank == 0){printf("\nTIMESTEP: %i\n", timesteps);}
 

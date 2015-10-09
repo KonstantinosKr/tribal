@@ -51,7 +51,7 @@ void contact_distance (unsigned int nt, iREAL *t[3][3], iREAL *p[3], iREAL *q[3]
       c[1] = t[2][1][i];
       c[2] = t[2][2][i];
 
-      ispc_bf (nt, a, b, c, d, e, f, pp, qq); 
+      //ispc_bf (nt, a, b, c, d, e, f, pp, qq); 
         
       /*
       for(unsigned int j=0;j<nt;j++)
