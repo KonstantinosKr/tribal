@@ -38,6 +38,15 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   pbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   qbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
 
+  iREAL *trvbuffer[3], *vrvbuffer, *prvbuffer, *qrvbuffer;
+  trvbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  trvbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  trvbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
+  vrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  //initially there is nothing in p,q buffers
+  prvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  qrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  
   send_idx = (int **) malloc(nproc*sizeof(int*));
   pivot = (int *) malloc(nproc*sizeof(int));
 
@@ -102,14 +111,14 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     {
       for(int k=0;k<3;k++)//loop through the xyz axis
       {
-        tbuffer[0][(i*size*3)+(j*3)+k] = t[0][k][send_idx[i][j]]; //point 0/A        
-        tbuffer[1][(i*size*3)+(j*3)+k] = t[1][k][send_idx[i][j]]; //point 1/B
-        tbuffer[2][(i*size*3)+(j*3)+k] = t[2][k][send_idx[i][j]]; //point 2/C
+        trvbuffer[0][(i*size*3)+(j*3)+k] = t[0][k][send_idx[i][j]]; //point 0/A        
+        trvbuffer[1][(i*size*3)+(j*3)+k] = t[1][k][send_idx[i][j]]; //point 1/B
+        trvbuffer[2][(i*size*3)+(j*3)+k] = t[2][k][send_idx[i][j]]; //point 2/C
 
         ///printf("POSITION:%i\n\n", (j*3)+k);
-        vbuffer[(i*size*3)+(j*3)+(k)] = v[k][send_idx[i][j]];
-        pbuffer[(i*size*3)+(j*3)+(k)] = p[k][send_idx[i][j]];
-        qbuffer[(i*size*3)+(j*3)+(k)] = q[k][send_idx[i][j]];
+        vrvbuffer[(i*size*3)+(j*3)+(k)] = v[k][send_idx[i][j]];
+        prvbuffer[(i*size*3)+(j*3)+(k)] = p[k][send_idx[i][j]];
+        qrvbuffer[(i*size*3)+(j*3)+(k)] = q[k][send_idx[i][j]];
       }
     }
   }
@@ -217,12 +226,12 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     printf("RANK[%d]: receive from rank %d\n", myrank, i);
    
     //Asychronous Communication
-    MPI_Irecv(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myrvRequest[(x*7)+1]);
-    MPI_Irecv(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myrvRequest[(x*7)+2]);
-    MPI_Irecv(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, &myrvRequest[(x*7)+3]);
-    MPI_Irecv(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, &myrvRequest[(x*7)+4]);
-    MPI_Irecv(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, &myrvRequest[(x*7)+5]);
-    MPI_Irecv(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, &myrvRequest[(x*7)+6]);
+    MPI_Irecv(&trvbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myrvRequest[(x*7)+1]);
+    MPI_Irecv(&trvbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myrvRequest[(x*7)+2]);
+    MPI_Irecv(&trvbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, &myrvRequest[(x*7)+3]);
+    MPI_Irecv(&vrvbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, &myrvRequest[(x*7)+4]);
+    MPI_Irecv(&prvbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, &myrvRequest[(x*7)+5]);
+    MPI_Irecv(&qrvbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, &myrvRequest[(x*7)+6]);
   }
   
   for(int x=0;x<num_export_unique;x++)
@@ -253,13 +262,13 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     {
       for(int k=0;k<3;k++)
       {
-        t[0][k][receive_idx] = tbuffer[0][(i*size*3)+(j*3)+(k)];        
-        t[1][k][receive_idx] = tbuffer[1][(i*size*3)+(j*3)+(k)]; 
-        t[2][k][receive_idx] = tbuffer[2][(i*size*3)+(j*3)+(k)]; 
+        t[0][k][receive_idx] = trvbuffer[0][(i*size*3)+(j*3)+(k)];        
+        t[1][k][receive_idx] = trvbuffer[1][(i*size*3)+(j*3)+(k)]; 
+        t[2][k][receive_idx] = trvbuffer[2][(i*size*3)+(j*3)+(k)]; 
         
-        v[k][receive_idx] = vbuffer[(i*size*3)+(j*3)+(k)];
-        p[k][receive_idx] = pbuffer[(i*size*3)+(j*3)+(k)];
-        q[k][receive_idx] = qbuffer[(i*size*3)+(j*3)+(k)];
+        v[k][receive_idx] = vrvbuffer[(i*size*3)+(j*3)+(k)];
+        p[k][receive_idx] = prvbuffer[(i*size*3)+(j*3)+(k)];
+        q[k][receive_idx] = qrvbuffer[(i*size*3)+(j*3)+(k)];
       }
       receive_idx++;
     }
@@ -280,9 +289,11 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   for(int i=0; i<3;i++)
   {//free memory
     free(tbuffer[i]);
+    free(trvbuffer[i]);
   }
     free(pivot);
     free(vbuffer);
+    free(vrvbuffer);
     free(send_idx); 
     free(myRequest);
     free(myrvRequest);
@@ -383,7 +394,7 @@ int main (int argc, char **argv)
   for(time = 0; time < 100; time++)
   {
     if(myrank == 0){printf("\nTIMESTEP: %i\n", timesteps);}
-
+    
     loba_balance (lb, nt, t[0], tid, 1.1,
                   &num_import, &import_procs, 
                   &num_export, &export_procs, 
@@ -397,16 +408,18 @@ int main (int argc, char **argv)
                         export_global_ids, export_local_ids);
 
     printf("passed migration\n");
-    
+    if(timesteps==65){
+    printf("truncate point\n");
+    }
     loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
     printf("passed ghosts migration\n"); 
     
     integrate (step, lo, hi, nt, t, v);
     
-    loba_getbox (lb, myrank, mylo, myhi);//get local subdomain boundary box
+    //loba_getbox (lb, myrank, mylo, myhi);//get local subdomain boundary box
     
-    write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);
+    //write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);
       
     timesteps++;
   }
