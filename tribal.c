@@ -38,6 +38,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   pbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   qbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
 
+  int *rcvpivot;
   iREAL *trvbuffer[3], *vrvbuffer, *prvbuffer, *qrvbuffer;
   trvbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   trvbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
@@ -50,8 +51,11 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   send_idx = (int **) malloc(nproc*sizeof(int*));
   pivot = (int *) malloc(nproc*sizeof(int));
 
+  rcvpivot = (int *) malloc(nproc*sizeof(int));
+
   for(int i=0;i<nproc;i++)
   {
+    rcvpivot[i] = 0;
     pivot[i] = 0;
     send_idx[i] = (int *) malloc(size*sizeof(int));
   }
@@ -205,8 +209,8 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   } else if(*nt >= 0 && num_export <= 0){
     receive_idx = *nt;
   }
-  MPI_Request *myRequest = (MPI_Request*) malloc(num_export_unique*7*sizeof(MPI_Request));//7 sends
-  MPI_Request *myrvRequest = (MPI_Request*) malloc(num_import_unique*7*sizeof(MPI_Request));//7 sends 
+  MPI_Request *myRequest = (MPI_Request*) malloc(num_export_unique*6*sizeof(MPI_Request));//7 sends
+  MPI_Request *myrvRequest = (MPI_Request*) malloc(num_import_unique*6*sizeof(MPI_Request));//7 sends 
   
   for(int x=0;x<num_export_unique;x++)
   {
@@ -217,7 +221,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   for(int x=0;x<num_import_unique;x++)
   {
     int i = import_unique_procs[x];  
-    MPI_Recv(&pivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&rcvpivot[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
   }
   
   for(int x=0;x<num_import_unique;x++)
@@ -225,13 +229,12 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     int i = import_unique_procs[x];  
     printf("RANK[%d]: receive from rank %d\n", myrank, i);
    
-    //Asychronous Communication
-    MPI_Irecv(&trvbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myrvRequest[(x*7)+1]);
-    MPI_Irecv(&trvbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myrvRequest[(x*7)+2]);
-    MPI_Irecv(&trvbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, &myrvRequest[(x*7)+3]);
-    MPI_Irecv(&vrvbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, &myrvRequest[(x*7)+4]);
-    MPI_Irecv(&prvbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, &myrvRequest[(x*7)+5]);
-    MPI_Irecv(&qrvbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, &myrvRequest[(x*7)+6]);
+    MPI_Irecv(&trvbuffer[0][(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myrvRequest[(x*6)+0]);
+    MPI_Irecv(&trvbuffer[1][(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myrvRequest[(x*6)+1]);
+    MPI_Irecv(&trvbuffer[2][(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, &myrvRequest[(x*6)+2]);
+    MPI_Irecv(&vrvbuffer[(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, &myrvRequest[(x*6)+3]);
+    MPI_Irecv(&prvbuffer[(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, &myrvRequest[(x*6)+4]);
+    MPI_Irecv(&qrvbuffer[(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, &myrvRequest[(x*6)+5]);
   }
   
   for(int x=0;x<num_export_unique;x++)
@@ -239,23 +242,22 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     int i = export_unique_procs[x];
   
     printf("RANK[%d]: send to rank %d\n", myrank, i);
-    //Asychronous Communication
-    MPI_Isend(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myRequest[(x*7)+1]);
-    MPI_Isend(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myRequest[(x*7)+2]);
-    MPI_Isend(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, &myRequest[(x*7)+3]);  
-    MPI_Isend(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, &myRequest[(x*7)+4]);
-    MPI_Isend(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, &myRequest[(x*7)+5]);
-    MPI_Isend(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, &myRequest[(x*7)+6]);
+    MPI_Isend(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myRequest[(x*6)+0]);
+    MPI_Isend(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myRequest[(x*6)+1]);
+    MPI_Isend(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, &myRequest[(x*6)+2]);  
+    MPI_Isend(&vbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 4, MPI_COMM_WORLD, &myRequest[(x*6)+3]);
+    MPI_Isend(&pbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, &myRequest[(x*6)+4]);
+    MPI_Isend(&qbuffer[(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, &myRequest[(x*6)+5]);
   }
   
   for(int x=0;x<num_import_unique;x++)
   {
-    MPI_Wait(&myrvRequest[(x*7)+1], MPI_STATUS_IGNORE);
-    MPI_Wait(&myrvRequest[(x*7)+2], MPI_STATUS_IGNORE);
-    MPI_Wait(&myrvRequest[(x*7)+3], MPI_STATUS_IGNORE);
-    MPI_Wait(&myrvRequest[(x*7)+4], MPI_STATUS_IGNORE);
-    MPI_Wait(&myrvRequest[(x*7)+5], MPI_STATUS_IGNORE); 
-    MPI_Wait(&myrvRequest[(x*7)+6], MPI_STATUS_IGNORE);
+    MPI_Wait(&myrvRequest[(x*6)], MPI_STATUS_IGNORE);
+    MPI_Wait(&myrvRequest[(x*6)+1], MPI_STATUS_IGNORE);
+    MPI_Wait(&myrvRequest[(x*6)+2], MPI_STATUS_IGNORE);
+    MPI_Wait(&myrvRequest[(x*6)+3], MPI_STATUS_IGNORE);
+    MPI_Wait(&myrvRequest[(x*6)+4], MPI_STATUS_IGNORE); 
+    MPI_Wait(&myrvRequest[(x*6)+5], MPI_STATUS_IGNORE);
     int i = import_unique_procs[x];
 
     for(unsigned int j=0;j<pivot[i];j++)
@@ -276,12 +278,12 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   
   for(int x=0;x<num_export_unique;x++)
   {
-    MPI_Wait(&myRequest[(x*7)+1], MPI_STATUS_IGNORE);
-    MPI_Wait(&myRequest[(x*7)+2], MPI_STATUS_IGNORE);
-    MPI_Wait(&myRequest[(x*7)+3], MPI_STATUS_IGNORE);
-    MPI_Wait(&myRequest[(x*7)+4], MPI_STATUS_IGNORE);
-    MPI_Wait(&myRequest[(x*7)+5], MPI_STATUS_IGNORE);
-    MPI_Wait(&myRequest[(x*7)+6], MPI_STATUS_IGNORE); 
+    MPI_Wait(&myRequest[(x*6)], MPI_STATUS_IGNORE);
+    MPI_Wait(&myRequest[(x*6)+1], MPI_STATUS_IGNORE);
+    MPI_Wait(&myRequest[(x*6)+2], MPI_STATUS_IGNORE);
+    MPI_Wait(&myRequest[(x*6)+3], MPI_STATUS_IGNORE);
+    MPI_Wait(&myRequest[(x*6)+4], MPI_STATUS_IGNORE);
+    MPI_Wait(&myRequest[(x*6)+5], MPI_STATUS_IGNORE); 
   }
 
   *nt = *nt + (num_import-num_export);
@@ -408,9 +410,7 @@ int main (int argc, char **argv)
                         export_global_ids, export_local_ids);
 
     printf("passed migration\n");
-    if(timesteps==65){
-    printf("truncate point\n");
-    }
+    
     loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
     printf("passed ghosts migration\n"); 
