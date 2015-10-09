@@ -363,7 +363,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
       pivot[proc]++;
     }
   }
-
+  printf("RANK[%i]: NT: %i\n",myrank, *nt);
   //assign values to tmp export buffers
   for(int i=0;i<nNeighbors;i++)//n processes to prepare buffers for
   {
@@ -383,8 +383,8 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
     }
   }
 
-  MPI_Request *myRequest = (MPI_Request*) malloc(nNeighbors*7*sizeof(MPI_Request));//7 sends
-  MPI_Request *myrvRequest = (MPI_Request*) malloc(nNeighbors*7*sizeof(MPI_Request));//7 sends 
+  MPI_Request *myRequest = (MPI_Request*) malloc(nNeighbors*8*sizeof(MPI_Request));//7 sends
+  MPI_Request *myrvRequest = (MPI_Request*) malloc(nNeighbors*8*sizeof(MPI_Request));//7 sends 
   
   //blocking communication
   for(int i=0; i<nNeighbors; i++)
@@ -405,7 +405,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
     
       MPI_Wait(&myrvRequest[(j*7)], MPI_STATUS_IGNORE);
       MPI_Wait(&myRequest[(j*7)], MPI_STATUS_IGNORE);
-      printf("RANK[%i]: i will receive:%i and send:%i to rank:%i\n", myrank, rcvpivot[j], pivot[j], j);
     } else if(pivot[j] > 0 && rcvpivot[j] == 0)
     { 
       MPI_Isend(&send_idx[j][0], pivot[j], MPI_INT, j, 2, MPI_COMM_WORLD, &myRequest[(j*7)]);
@@ -415,9 +414,9 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
       MPI_Irecv(&tid_buffer[j][0], rcvpivot[j], MPI_INT, j, 2, MPI_COMM_WORLD, &myrvRequest[(j*7)]);  
       MPI_Wait(&myrvRequest[(j*7)], MPI_STATUS_IGNORE);
     }
+    printf("RANK[%i]: i will receive:%i and send:%i to rank:%i\n", myrank, rcvpivot[j], pivot[j], j);
   }
   
- 
   for(int x=0;x<nNeighbors;x++)
   { 
     if(rcvpivot[neighborhood[x]] > 0)
@@ -491,16 +490,18 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, int *neighborhood, int nNe
       MPI_Wait(&myRequest[(x*7)+6], MPI_STATUS_IGNORE); 
     }
   }
-
   for(int i=0; i<3;i++)
   {//free memory
     free(tbuffer[i]);
   }
-    free(pivot);
-    free(vbuffer);
-    free(send_idx);
-    free(myRequest);
-    free(myrvRequest);
+  free(pbuffer);
+  free(qbuffer);
+  free(pivot);
+  free(rcvpivot);
+  free(vbuffer);
+  free(send_idx);
+  free(myRequest);
+  free(myrvRequest);
 }
 
 /* free load balancer */
