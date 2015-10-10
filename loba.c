@@ -441,28 +441,19 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
   
   //contact_distance(*nt, t, p, q, distance); 
   
-  unsigned int receive_idx = *nt; //set to last id
-  
+  unsigned int receive_idx = *nt + 1; //set to last id
   for(int i=0;i<nNeighbors;i++)
   {
     int proc = neighborhood[i];
     if(rcvpivot[i] > 0)
     {
-      printf("code region reached!!!\n");
       MPI_Wait(&myrvRequest[(i*7)], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of receiving tid_buffer from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myrvRequest[(i*7)+1], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of receiving trvbuffer[0] from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myrvRequest[(i*7)+2], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of receiving trvbuffer[1] from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myrvRequest[(i*7)+3], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of receiving trvbuffer[2] from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myrvRequest[(i*7)+4], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of receiving vrvbuffer from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myrvRequest[(i*7)+5], MPI_STATUS_IGNORE); 
-      printf("Myrank[%i] : waiting of receiving prvbuffer from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myrvRequest[(i*7)+6], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of receiving qrvbuffer from rank:%i completed\n", myrank, proc);
       
       for(unsigned int j=0;j<rcvpivot[i];j++)
       {
@@ -484,19 +475,12 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     if(pivot[i] > 0)
     {//safe check
       MPI_Wait(&myRequest[(i*7)], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of sending send_idx from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myRequest[(i*7)+1], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of sending tbuffer[0] from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myRequest[(i*7)+2], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of sending tbuffer[1] from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myRequest[(i*7)+3], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of sending tbuffer[2] from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myRequest[(i*7)+4], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of sending vbuffer from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myRequest[(i*7)+5], MPI_STATUS_IGNORE);
-      printf("Myrank[%i] : waiting of sending pbuffer from rank:%i completed\n", myrank, proc);
       MPI_Wait(&myRequest[(i*7)+6], MPI_STATUS_IGNORE); 
-      printf("Myrank[%i] : waiting of sending qbuffer from rank:%i completed\n", myrank, proc);
     }
   }
 

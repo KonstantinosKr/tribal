@@ -115,14 +115,14 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     {
       for(int k=0;k<3;k++)//loop through the xyz axis
       {
-        trvbuffer[0][(i*size*3)+(j*3)+k] = t[0][k][send_idx[i][j]]; //point 0/A        
-        trvbuffer[1][(i*size*3)+(j*3)+k] = t[1][k][send_idx[i][j]]; //point 1/B
-        trvbuffer[2][(i*size*3)+(j*3)+k] = t[2][k][send_idx[i][j]]; //point 2/C
+        tbuffer[0][(i*size*3)+(j*3)+k] = t[0][k][send_idx[i][j]]; //point 0/A        
+        tbuffer[1][(i*size*3)+(j*3)+k] = t[1][k][send_idx[i][j]]; //point 1/B
+        tbuffer[2][(i*size*3)+(j*3)+k] = t[2][k][send_idx[i][j]]; //point 2/C
 
         ///printf("POSITION:%i\n\n", (j*3)+k);
-        vrvbuffer[(i*size*3)+(j*3)+(k)] = v[k][send_idx[i][j]];
-        prvbuffer[(i*size*3)+(j*3)+(k)] = p[k][send_idx[i][j]];
-        qrvbuffer[(i*size*3)+(j*3)+(k)] = q[k][send_idx[i][j]];
+        vbuffer[(i*size*3)+(j*3)+(k)] = v[k][send_idx[i][j]];
+        pbuffer[(i*size*3)+(j*3)+(k)] = p[k][send_idx[i][j]];
+        qbuffer[(i*size*3)+(j*3)+(k)] = q[k][send_idx[i][j]];
       }
     }
   }
@@ -236,6 +236,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     MPI_Irecv(&prvbuffer[(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 5, MPI_COMM_WORLD, &myrvRequest[(x*6)+4]);
     MPI_Irecv(&qrvbuffer[(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 6, MPI_COMM_WORLD, &myrvRequest[(x*6)+5]);
   }
+
   
   for(int x=0;x<num_export_unique;x++)
   {
@@ -260,7 +261,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
     MPI_Wait(&myrvRequest[(x*6)+5], MPI_STATUS_IGNORE);
     int i = import_unique_procs[x];
 
-    for(unsigned int j=0;j<pivot[i];j++)
+    for(unsigned int j=0;j<rcvpivot[i];j++)
     {
       for(int k=0;k<3;k++)
       {
@@ -393,7 +394,7 @@ int main (int argc, char **argv)
   iREAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 100; time++)
+  for(time = 0; time < 2; time++)
   {
     if(myrank == 0){printf("\nTIMESTEP: %i\n", timesteps);}
     
@@ -409,17 +410,22 @@ int main (int argc, char **argv)
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
 
-    printf("passed migration\n");
+    printf("passed migratien\n");
+   
+    for(int i = 0; i< nt; i++)
+   printf("\n\nBefore - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
     
     loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
+    for(int i = 0; i<nt; i++)
+    printf("\n\nAfter - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
     printf("passed ghosts migration\n"); 
     
-    integrate (step, lo, hi, nt, t, v);
+    //integrate (step, lo, hi, nt, t, v);
     
-    //loba_getbox (lb, myrank, mylo, myhi);//get local subdomain boundary box
+    loba_getbox (lb, myrank, mylo, myhi);//get local subdomain boundary box
     
-    //write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);
+    write_pointsVTK(myrank, nt, t, v, mylo, myhi, timesteps);
       
     timesteps++;
   }
