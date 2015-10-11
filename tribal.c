@@ -396,7 +396,7 @@ int main (int argc, char **argv)
   //for (time = 0.0; time < 1.0; time += step)
   for(time = 0; time < 100; time++)
   {
-    if(myrank == 0){printf("\nTIMESTEP: %i\n", timesteps);}
+    if(myrank == 0){printf("TIMESTEP: %i\n", timesteps);}
     
     loba_balance (lb, nt, t[0], tid, 1.1,
                   &num_import, &import_procs, 
@@ -422,7 +422,14 @@ int main (int argc, char **argv)
     timesteps++;
   }
   
-  printf("finished\n");
+  MPI_Barrier(MPI_COMM_WORLD);
+  if(myrank == 0)//have to make sure all ranks finished
+  {
+    printf("Computation Finished.\n");
+    postProcessing(nprocs, size, timesteps);
+    printf("Post-Processing Finished.\n");
+  }
+
   /* finalise */
   loba_destroy (lb);
 

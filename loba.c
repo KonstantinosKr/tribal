@@ -441,7 +441,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     }
   }
   
-  //contact_distance(*nt, t, p, q, distance); 
+  contact_distance(*nt, t, p, q, distance); 
   
   unsigned int receive_idx = *nt + 1; //set to last id
   for(int i=0;i<nNeighbors;i++)
