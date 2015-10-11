@@ -4,7 +4,7 @@
 #include <string.h>
 #include <float.h>
 #include <iostream>
-#define nranks 2
+#define nranks 32
 #define timesteps 100
 #define size 1000000
 

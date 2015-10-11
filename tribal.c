@@ -227,7 +227,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   for(int x=0;x<num_import_unique;x++)
   {
     int i = import_unique_procs[x];  
-    printf("RANK[%d]: receive from rank %d\n", myrank, i);
+    //printf("RANK[%d]: receive from rank %d\n", myrank, i);
    
     MPI_Irecv(&trvbuffer[0][(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myrvRequest[(x*6)+0]);
     MPI_Irecv(&trvbuffer[1][(i*size*3)], rcvpivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myrvRequest[(x*6)+1]);
@@ -242,7 +242,7 @@ static void migrate_triangles (unsigned long long int size, unsigned int *nt, iR
   {
     int i = export_unique_procs[x];
   
-    printf("RANK[%d]: send to rank %d\n", myrank, i);
+    //printf("RANK[%d]: send to rank %d\n", myrank, i);
     MPI_Isend(&tbuffer[0][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &myRequest[(x*6)+0]);
     MPI_Isend(&tbuffer[1][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &myRequest[(x*6)+1]);
     MPI_Isend(&tbuffer[2][(i*size*3)], pivot[i]*3, MPI_DOUBLE, i, 3, MPI_COMM_WORLD, &myRequest[(x*6)+2]);  
@@ -394,7 +394,7 @@ int main (int argc, char **argv)
   iREAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 2; time++)
+  for(time = 0; time < 100; time++)
   {
     if(myrank == 0){printf("\nTIMESTEP: %i\n", timesteps);}
     
@@ -410,18 +410,10 @@ int main (int argc, char **argv)
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
 
-    printf("passed migratien\n");
-   
-    for(int i = 0; i< nt; i++)
-   printf("\n\nBefore - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
-    
     loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
-    for(int i = 0; i<nt; i++)
-    printf("\n\nAfter - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
-    printf("passed ghosts migration\n"); 
     
-    //integrate (step, lo, hi, nt, t, v);
+    integrate (step, lo, hi, nt, t, v);
     
     loba_getbox (lb, myrank, mylo, myhi);//get local subdomain boundary box
     
