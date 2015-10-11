@@ -396,11 +396,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
         pbuffer[(proc*size*3)+(j*3)+k] = p[k][send_idx[i][j]];
         qbuffer[(proc*size*3)+(j*3)+k] = q[k][send_idx[i][j]];
       }
-      if(proc == 0)
-      {
-
-    printf("Before send BUFFER - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[send_idx[i][j]], t[0][0][send_idx[i][j]], t[0][1][send_idx[i][j]], t[0][2][send_idx[i][j]], t[1][0][send_idx[i][j]], t[1][1][send_idx[i][j]], t[1][2][send_idx[i][j]], t[2][0][send_idx[i][j]], t[2][1][send_idx[i][j]], t[2][2][send_idx[i][j]]);
-      }
     }
   }
 
@@ -448,13 +443,8 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     }
   }
  
-  if(myrank == 0)
-  for(int i = 0; i<*nt;i++)
-    printf("Before - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
-
   contact_distance(*nt, t, p, q, distance); 
-  if(myrank==0) 
-  printf("TID received: ");
+  
   unsigned int receive_idx = *nt; //set to last id
   for(int i=0;i<nNeighbors;i++)
   {
@@ -473,8 +463,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
       {
         tid[receive_idx] = rcvtid_buffer[i][j]; //tids to imported
 
-        if(myrank == 0)
-        printf("%i,", tid[receive_idx]);
         for(int k=0;k<3;k++)
         {
           t[0][k][receive_idx] = trvbuffer[0][(proc*size*3)+(j*3)+(k)];        
@@ -485,9 +473,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
           p[k][receive_idx] = prvbuffer[(proc*size*3)+(j*3)+(k)];
           q[k][receive_idx] = qrvbuffer[(proc*size*3)+(j*3)+(k)];
         }
-        if(myrank == 0)
-    printf("RECEIVE - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[receive_idx], t[0][0][receive_idx], t[0][1][receive_idx], t[0][2][receive_idx], t[1][0][receive_idx], t[1][1][receive_idx], t[1][2][receive_idx], t[2][0][receive_idx], t[2][1][receive_idx], t[2][2][receive_idx]);
-        receive_idx++;
       }
     }
    
@@ -502,11 +487,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
       MPI_Wait(&myRequest[(i*7)+6], MPI_STATUS_IGNORE); 
     }
   }
-    printf("\n");
-
-  if(myrank == 0)
-  for(int i = 0; i<receive_idx;i++)
-    printf("After - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
 
   for(int i=0; i<3;i++)
   {
