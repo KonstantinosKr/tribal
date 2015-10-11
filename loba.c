@@ -334,7 +334,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
   //allocate memory for tmp buffers
-  int **send_idx, *pivot, *rcvpivot, **tid_buffer; 
+  int **send_idx, *pivot, *rcvpivot, **tid_buffer, **rcvtid_buffer; 
   iREAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
   tbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
@@ -355,6 +355,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
   
   send_idx = (int **) malloc(nproc*sizeof(int*));
   tid_buffer = (int **) malloc(nproc*sizeof(int*));
+  rcvtid_buffer = (int **) malloc(nproc*sizeof(int*));
   pivot = (int *) malloc(nproc*sizeof(int));
   rcvpivot = (int *) malloc(nproc*sizeof(int));
   
@@ -369,10 +370,12 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     rcvpivot[i] = 0;
     send_idx[i] = (int *) malloc(size*sizeof(int));
     tid_buffer[i] = (int *) malloc(size*sizeof(int));
-    
+    rcvtid_buffer[i] = (int *) malloc(size*sizeof(int));
+
     for(unsigned int j = 0; j < *nt; j++)
     { //set send indices and pivots for buffers
-      send_idx[i][j] = tid[j];//maybe just assign to send_idx[proc] if all to be send??
+      send_idx[i][j] = j;
+      tid_buffer[i][j] = tid[j];
       pivot[i]++;
     }
   }
@@ -393,6 +396,11 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
         pbuffer[(proc*size*3)+(j*3)+k] = p[k][send_idx[i][j]];
         qbuffer[(proc*size*3)+(j*3)+k] = q[k][send_idx[i][j]];
       }
+      if(proc == 0)
+      {
+
+    printf("Before send BUFFER - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[send_idx[i][j]], t[0][0][send_idx[i][j]], t[0][1][send_idx[i][j]], t[0][2][send_idx[i][j]], t[1][0][send_idx[i][j]], t[1][1][send_idx[i][j]], t[1][2][send_idx[i][j]], t[2][0][send_idx[i][j]], t[2][1][send_idx[i][j]], t[2][2][send_idx[i][j]]);
+      }
     }
   }
 
@@ -406,7 +414,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     
     MPI_Send(&pivot[i], 1, MPI_INT, proc, 0, MPI_COMM_WORLD); 
     MPI_Recv(&rcvpivot[i], 1, MPI_INT, proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-    //printf("Rank[%i]: send to rank:%i, pivot:%i , receive from rank:%i rcvpivot: %i\n", myrank, proc, pivot[i], proc, rcvpivot[i]);
   }
   
   for(int i=0;i<nNeighbors;i++)
@@ -414,7 +421,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     int proc = neighborhood[i];
     if(rcvpivot[i] > 0)
     {//safe check     
-      MPI_Irecv(&tid_buffer[i][0], rcvpivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*7)]);  
+      MPI_Irecv(&rcvtid_buffer[i][0], rcvpivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*7)]);  
       MPI_Irecv(&trvbuffer[0][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 2, MPI_COMM_WORLD, &myrvRequest[(i*7)+1]);
       MPI_Irecv(&trvbuffer[1][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 3, MPI_COMM_WORLD, &myrvRequest[(i*7)+2]);
       MPI_Irecv(&trvbuffer[2][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 4, MPI_COMM_WORLD, &myrvRequest[(i*7)+3]);
@@ -430,7 +437,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     int proc = neighborhood[i];
     if(pivot[i] > 0)
     {//safe check
-      MPI_Isend(&send_idx[i][0], pivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myRequest[(i*7)]);
+      MPI_Isend(&tid_buffer[i][0], pivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myRequest[(i*7)]);
       MPI_Isend(&tbuffer[0][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 2, MPI_COMM_WORLD, &myRequest[(i*7)+1]);
       MPI_Isend(&tbuffer[1][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 3, MPI_COMM_WORLD, &myRequest[(i*7)+2]);
       MPI_Isend(&tbuffer[2][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 4, MPI_COMM_WORLD, &myRequest[(i*7)+3]);
@@ -440,10 +447,15 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
       MPI_Isend(&qbuffer[(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 7, MPI_COMM_WORLD, &myRequest[(i*7)+6]);
     }
   }
-  
+ 
+  if(myrank == 0)
+  for(int i = 0; i<*nt;i++)
+    printf("Before - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
+
   contact_distance(*nt, t, p, q, distance); 
-  
-  unsigned int receive_idx = *nt + 1; //set to last id
+  if(myrank==0) 
+  printf("TID received: ");
+  unsigned int receive_idx = *nt; //set to last id
   for(int i=0;i<nNeighbors;i++)
   {
     int proc = neighborhood[i];
@@ -459,7 +471,10 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
       
       for(unsigned int j=0;j<rcvpivot[i];j++)
       {
-        tid[receive_idx] = tid_buffer[i][j]; //tids to imported
+        tid[receive_idx] = rcvtid_buffer[i][j]; //tids to imported
+
+        if(myrank == 0)
+        printf("%i,", tid[receive_idx]);
         for(int k=0;k<3;k++)
         {
           t[0][k][receive_idx] = trvbuffer[0][(proc*size*3)+(j*3)+(k)];        
@@ -470,10 +485,12 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
           p[k][receive_idx] = prvbuffer[(proc*size*3)+(j*3)+(k)];
           q[k][receive_idx] = qrvbuffer[(proc*size*3)+(j*3)+(k)];
         }
+        if(myrank == 0)
+    printf("RECEIVE - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[receive_idx], t[0][0][receive_idx], t[0][1][receive_idx], t[0][2][receive_idx], t[1][0][receive_idx], t[1][1][receive_idx], t[1][2][receive_idx], t[2][0][receive_idx], t[2][1][receive_idx], t[2][2][receive_idx]);
         receive_idx++;
       }
     }
-    
+   
     if(pivot[i] > 0)
     {//safe check
       MPI_Wait(&myRequest[(i*7)], MPI_STATUS_IGNORE);
@@ -485,6 +502,11 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
       MPI_Wait(&myRequest[(i*7)+6], MPI_STATUS_IGNORE); 
     }
   }
+    printf("\n");
+
+  if(myrank == 0)
+  for(int i = 0; i<receive_idx;i++)
+    printf("After - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
 
   for(int i=0; i<3;i++)
   {
@@ -494,6 +516,8 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
   free(qbuffer);
   free(pivot);
   free(rcvpivot);
+  free(tid_buffer);
+  free(rcvtid_buffer);
   free(vbuffer);
   free(send_idx);
   free(myRequest);

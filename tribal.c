@@ -394,7 +394,7 @@ int main (int argc, char **argv)
   iREAL step = 1E-3, time; unsigned int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 100; time++)
+  for(time = 0; time < 1; time++)
   {
     if(myrank == 0){printf("TIMESTEP: %i\n", timesteps);}
     
@@ -404,6 +404,9 @@ int main (int argc, char **argv)
                   &import_global_ids, &import_local_ids, 
                   &export_global_ids, &export_local_ids);
     
+  for(int i = 0; i<nt;i++)
+    printf("Before MIGRATION - RANK[%i]: tid = %i\n t[0][0][i] = %f, t[0][1][i] = %f, t[0][2][i] = %f\n t[1][0][i] = %f, t[1][1][i] = %f, t[1][2][i] = %f\n t[2][0][i] = %f, t[2][1][i] = %f, t[2][2][i] = %f\n", myrank, tid[i], t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
+
     migrate_triangles (size, &nt, t, v, p, q, tid, pid, 
                         num_import, import_procs, 
                         num_export, export_procs, 
