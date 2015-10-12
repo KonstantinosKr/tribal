@@ -328,180 +328,176 @@ void loba_getbox (struct loba *lb, int part, iREAL lo[3], iREAL hi[3])
   }
 }
 
-void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], iREAL *p[3], iREAL *q[3], iREAL *distance, unsigned int *tid, unsigned int *pid)
+void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], iREAL *distance, unsigned int *tid, unsigned int *pid)
 {
-  int nproc;
-  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-
-  //allocate memory for tmp buffers
-  int **send_idx, *pivot, *rcvpivot, **tid_buffer, **rcvtid_buffer; 
-  iREAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
-  tbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  tbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
-  vbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  //initially there is nothing in p,q buffers
-  pbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  qbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-
-  iREAL *trvbuffer[3], *vrvbuffer, *prvbuffer, *qrvbuffer;
-  trvbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  trvbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  trvbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
-  vrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  //initially there is nothing in p,q buffers
-  prvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  qrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  
-  send_idx = (int **) malloc(nproc*sizeof(int*));
-  tid_buffer = (int **) malloc(nproc*sizeof(int*));
-  rcvtid_buffer = (int **) malloc(nproc*sizeof(int*));
-  pivot = (int *) malloc(nproc*sizeof(int));
-  rcvpivot = (int *) malloc(nproc*sizeof(int));
-  
-  int *neighborhood = (int *) malloc(sizeof(int[nproc]));
-  int nNeighbors=0;
-  loba_getAdjacent(lb, myrank, neighborhood, &nNeighbors);
-
-  //prepare export buffers
-  for (int i = 0; i < nNeighbors; i++) 
-  {
-    pivot[i] = 0; //set pivot to zero
-    rcvpivot[i] = 0;
-    send_idx[i] = (int *) malloc(size*sizeof(int));
-    tid_buffer[i] = (int *) malloc(size*sizeof(int));
-    rcvtid_buffer[i] = (int *) malloc(size*sizeof(int));
-
-    for(unsigned int j = 0; j < *nt; j++)
-    { //set send indices and pivots for buffers
-      send_idx[i][j] = j;
-      tid_buffer[i][j] = tid[j];
-      pivot[i]++;
-    }
-  }
-  
-  //assign values to tmp export buffers
-  for(int i=0;i<nNeighbors;i++)//n processes to prepare buffers for
-  {
-    int proc = neighborhood[i];
-    for(unsigned int j=0;j<pivot[i];j++)//pivot gives n number of ids to loop through
-    {
-      for(int k=0;k<3;k++)//loop through the xyz axis
-      {
-        tbuffer[0][(proc*size*3)+(j*3)+k] = t[0][k][send_idx[i][j]]; //point 0        
-        tbuffer[1][(proc*size*3)+(j*3)+k] = t[1][k][send_idx[i][j]]; //point 1
-        tbuffer[2][(proc*size*3)+(j*3)+k] = t[2][k][send_idx[i][j]]; //point 2
-
-        vbuffer[(proc*size*3)+(j*3)+k] = v[k][send_idx[i][j]];
-        pbuffer[(proc*size*3)+(j*3)+k] = p[k][send_idx[i][j]];
-        qbuffer[(proc*size*3)+(j*3)+k] = q[k][send_idx[i][j]];
-      }
-    }
-  }
-
-  MPI_Request *myRequest = (MPI_Request*) malloc(nNeighbors*7*sizeof(MPI_Request));//7 sends
-  MPI_Request *myrvRequest = (MPI_Request*) malloc(nNeighbors*7*sizeof(MPI_Request));//7 sends 
-  
-  //blocking communication
-  for(int i=0; i<nNeighbors; i++)
-  {
-    int proc = neighborhood[i];
+    int nproc;
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     
-    MPI_Send(&pivot[i], 1, MPI_INT, proc, 0, MPI_COMM_WORLD); 
-    MPI_Recv(&rcvpivot[i], 1, MPI_INT, proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-  }
-  
-  for(int i=0;i<nNeighbors;i++)
-  { 
-    int proc = neighborhood[i];
-    if(rcvpivot[i] > 0)
-    {//safe check     
-      MPI_Irecv(&rcvtid_buffer[i][0], rcvpivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*7)]);  
-      MPI_Irecv(&trvbuffer[0][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 2, MPI_COMM_WORLD, &myrvRequest[(i*7)+1]);
-      MPI_Irecv(&trvbuffer[1][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 3, MPI_COMM_WORLD, &myrvRequest[(i*7)+2]);
-      MPI_Irecv(&trvbuffer[2][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 4, MPI_COMM_WORLD, &myrvRequest[(i*7)+3]);
-      
-      MPI_Irecv(&vrvbuffer[(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 5, MPI_COMM_WORLD, &myrvRequest[(i*7)+4]);
-      MPI_Irecv(&prvbuffer[(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 6, MPI_COMM_WORLD, &myrvRequest[(i*7)+5]);
-      MPI_Irecv(&qrvbuffer[(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 7, MPI_COMM_WORLD, &myrvRequest[(i*7)+6]);
-    }
-  }
-
-  for(int i=0;i<nNeighbors;i++)
-  {
-    int proc = neighborhood[i];
-    if(pivot[i] > 0)
-    {//safe check
-      MPI_Isend(&tid_buffer[i][0], pivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myRequest[(i*7)]);
-      MPI_Isend(&tbuffer[0][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 2, MPI_COMM_WORLD, &myRequest[(i*7)+1]);
-      MPI_Isend(&tbuffer[1][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 3, MPI_COMM_WORLD, &myRequest[(i*7)+2]);
-      MPI_Isend(&tbuffer[2][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 4, MPI_COMM_WORLD, &myRequest[(i*7)+3]);
-      
-      MPI_Isend(&vbuffer[(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 5, MPI_COMM_WORLD, &myRequest[(i*7)+4]);
-      MPI_Isend(&pbuffer[(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 6, MPI_COMM_WORLD, &myRequest[(i*7)+5]);
-      MPI_Isend(&qbuffer[(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 7, MPI_COMM_WORLD, &myRequest[(i*7)+6]);
-    }
-  }
- 
-  contact_distance(*nt, t, p, q, distance); 
-  
-  unsigned int receive_idx = *nt; //set to last id
-  for(int i=0;i<nNeighbors;i++)
-  {
-    int proc = neighborhood[i];
-    if(rcvpivot[i] > 0)
+    //allocate memory for tmp buffers
+    int **send_idx, *pivot, *rcvpivot, **tid_buffer, **rcvtid_buffer, **pid_buffer, **rcvpid_buffer;;
+    iREAL *tbuffer[3], *vbuffer, *pbuffer, *qbuffer;
+    tbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    tbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    vbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    
+    
+    iREAL *trvbuffer[3], *vrvbuffer;
+    trvbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    trvbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    trvbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    vrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+    
+    
+    send_idx = (int **) malloc(nproc*sizeof(int*));
+    
+    tid_buffer = (int **) malloc(nproc*sizeof(int*));
+    rcvtid_buffer = (int **) malloc(nproc*sizeof(int*));
+    
+    pid_buffer = (int **) malloc(nproc*sizeof(int*));
+    rcvpid_buffer = (int **) malloc(nproc*sizeof(int*));
+    
+    pivot = (int *) malloc(nproc*sizeof(int));
+    rcvpivot = (int *) malloc(nproc*sizeof(int));
+    
+    int *neighborhood = (int *) malloc(sizeof(int[nproc]));
+    int nNeighbors=0;
+    loba_getAdjacent(lb, myrank, neighborhood, &nNeighbors);
+    
+    //prepare export buffers
+    for (int i = 0; i < nNeighbors; i++)
     {
-      MPI_Wait(&myrvRequest[(i*7)], MPI_STATUS_IGNORE);
-      MPI_Wait(&myrvRequest[(i*7)+1], MPI_STATUS_IGNORE);
-      MPI_Wait(&myrvRequest[(i*7)+2], MPI_STATUS_IGNORE);
-      MPI_Wait(&myrvRequest[(i*7)+3], MPI_STATUS_IGNORE);
-      MPI_Wait(&myrvRequest[(i*7)+4], MPI_STATUS_IGNORE);
-      MPI_Wait(&myrvRequest[(i*7)+5], MPI_STATUS_IGNORE); 
-      MPI_Wait(&myrvRequest[(i*7)+6], MPI_STATUS_IGNORE);
-      
-      for(unsigned int j=0;j<rcvpivot[i];j++)
-      {
-        tid[receive_idx] = rcvtid_buffer[i][j]; //tids to imported
-
-        for(int k=0;k<3;k++)
-        {
-          t[0][k][receive_idx] = trvbuffer[0][(proc*size*3)+(j*3)+(k)];        
-          t[1][k][receive_idx] = trvbuffer[1][(proc*size*3)+(j*3)+(k)]; 
-          t[2][k][receive_idx] = trvbuffer[2][(proc*size*3)+(j*3)+(k)]; 
-          
-          v[k][receive_idx] = vrvbuffer[(proc*size*3)+(j*3)+(k)];
-          p[k][receive_idx] = prvbuffer[(proc*size*3)+(j*3)+(k)];
-          q[k][receive_idx] = qrvbuffer[(proc*size*3)+(j*3)+(k)];
+        pivot[i] = 0; //set pivot to zero
+        rcvpivot[i] = 0;
+        send_idx[i] = (int *) malloc(size*sizeof(int));
+        tid_buffer[i] = (int *) malloc(size*sizeof(int));
+        rcvtid_buffer[i] = (int *) malloc(size*sizeof(int));
+        
+        pid_buffer[i] = (int *) malloc(size*sizeof(int));
+        rcvpid_buffer[i] = (int *) malloc(size*sizeof(int));
+        
+        for(unsigned int j = 0; j < *nt; j++)
+        { //set send indices and pivots for buffers
+            send_idx[i][j] = j;
+            tid_buffer[i][j] = tid[j];
+            pid_buffer[i][j] = pid[j];
+            pivot[i]++;
         }
-      }
     }
-   
-    if(pivot[i] > 0)
-    {//safe check
-      MPI_Wait(&myRequest[(i*7)], MPI_STATUS_IGNORE);
-      MPI_Wait(&myRequest[(i*7)+1], MPI_STATUS_IGNORE);
-      MPI_Wait(&myRequest[(i*7)+2], MPI_STATUS_IGNORE);
-      MPI_Wait(&myRequest[(i*7)+3], MPI_STATUS_IGNORE);
-      MPI_Wait(&myRequest[(i*7)+4], MPI_STATUS_IGNORE);
-      MPI_Wait(&myRequest[(i*7)+5], MPI_STATUS_IGNORE);
-      MPI_Wait(&myRequest[(i*7)+6], MPI_STATUS_IGNORE); 
+    
+    //assign values to tmp export buffers
+    for(int i=0;i<nNeighbors;i++)//n processes to prepare buffers for
+    {
+        int proc = neighborhood[i];
+        for(unsigned int j=0;j<pivot[i];j++)//pivot gives n number of ids to loop through
+        {
+            for(int k=0;k<3;k++)//loop through the xyz axis
+            {
+                tbuffer[0][(proc*size*3)+(j*3)+k] = t[0][k][send_idx[i][j]]; //point 0
+                tbuffer[1][(proc*size*3)+(j*3)+k] = t[1][k][send_idx[i][j]]; //point 1
+                tbuffer[2][(proc*size*3)+(j*3)+k] = t[2][k][send_idx[i][j]]; //point 2
+                
+                vbuffer[(proc*size*3)+(j*3)+k] = v[k][send_idx[i][j]];
+            }
+        }
     }
-  }
-
-  for(int i=0; i<3;i++)
-  {
-    free(tbuffer[i]);
-  }
-  free(pbuffer);
-  free(qbuffer);
-  free(pivot);
-  free(rcvpivot);
-  free(tid_buffer);
-  free(rcvtid_buffer);
-  free(vbuffer);
-  free(send_idx);
-  free(myRequest);
-  free(myrvRequest);
+    
+    MPI_Request *myRequest = (MPI_Request*) malloc(nNeighbors*6*sizeof(MPI_Request));//6 sends
+    MPI_Request *myrvRequest = (MPI_Request*) malloc(nNeighbors*6*sizeof(MPI_Request));//6 sends
+    
+    //blocking communication
+    for(int i=0; i<nNeighbors; i++)
+    {
+        int proc = neighborhood[i];
+        
+        MPI_Send(&pivot[i], 1, MPI_INT, proc, 0, MPI_COMM_WORLD);
+        MPI_Recv(&rcvpivot[i], 1, MPI_INT, proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+    
+    for(int i=0;i<nNeighbors;i++)
+    {
+        int proc = neighborhood[i];
+        if(rcvpivot[i] > 0)
+        {//safe check
+            MPI_Irecv(&rcvtid_buffer[i][0], rcvpivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*6)]);
+            MPI_Irecv(&trvbuffer[0][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 2, MPI_COMM_WORLD, &myrvRequest[(i*6)+1]);
+            MPI_Irecv(&trvbuffer[1][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 3, MPI_COMM_WORLD, &myrvRequest[(i*6)+2]);
+            MPI_Irecv(&trvbuffer[2][(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 4, MPI_COMM_WORLD, &myrvRequest[(i*6)+3]);
+            
+            MPI_Irecv(&vrvbuffer[(proc*size*3)], rcvpivot[i]*3, MPI_DOUBLE, proc, 5, MPI_COMM_WORLD, &myrvRequest[(i*6)+4]);
+            MPI_Irecv(&rcvpid_buffer[i][0], rcvpivot[i], MPI_INT, proc, 6, MPI_COMM_WORLD, &myrvRequest[(i*6)+5]);
+        }
+    }
+    
+    for(int i=0;i<nNeighbors;i++)
+    {
+        int proc = neighborhood[i];
+        if(pivot[i] > 0)
+        {//safe check
+            MPI_Isend(&tid_buffer[i][0], pivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myRequest[(i*6)]);
+            MPI_Isend(&tbuffer[0][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 2, MPI_COMM_WORLD, &myRequest[(i*6)+1]);
+            MPI_Isend(&tbuffer[1][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 3, MPI_COMM_WORLD, &myRequest[(i*6)+2]);
+            MPI_Isend(&tbuffer[2][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 4, MPI_COMM_WORLD, &myRequest[(i*6)+3]);
+            
+            MPI_Isend(&vbuffer[(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 5, MPI_COMM_WORLD, &myRequest[(i*6)+4]);
+            MPI_Isend(&pid_buffer[1][0], pivot[i], MPI_INT, proc, 6, MPI_COMM_WORLD, &myRequest[(i*6)+5]);
+        }
+    }
+    
+    //contact_distance(*nt, t, p, q, distance);
+    
+    unsigned int receive_idx = *nt; //set to last id
+    for(int i=0;i<nNeighbors;i++)
+    {
+        int proc = neighborhood[i];
+        if(rcvpivot[i] > 0)
+        {
+            MPI_Wait(&myrvRequest[(i*6)], MPI_STATUS_IGNORE);
+            MPI_Wait(&myrvRequest[(i*6)+1], MPI_STATUS_IGNORE);
+            MPI_Wait(&myrvRequest[(i*6)+2], MPI_STATUS_IGNORE);
+            MPI_Wait(&myrvRequest[(i*6)+3], MPI_STATUS_IGNORE);
+            MPI_Wait(&myrvRequest[(i*6)+4], MPI_STATUS_IGNORE);
+            MPI_Wait(&myrvRequest[(i*6)+5], MPI_STATUS_IGNORE);
+            
+            for(unsigned int j=0;j<rcvpivot[i];j++)
+            {
+                tid[receive_idx] = rcvtid_buffer[i][j]; //tids to imported
+                
+                for(int k=0;k<3;k++)
+                {
+                    t[0][k][receive_idx] = trvbuffer[0][(proc*size*3)+(j*3)+(k)];
+                    t[1][k][receive_idx] = trvbuffer[1][(proc*size*3)+(j*3)+(k)];
+                    t[2][k][receive_idx] = trvbuffer[2][(proc*size*3)+(j*3)+(k)];
+                    
+                    v[k][receive_idx] = vrvbuffer[(proc*size*3)+(j*3)+(k)];
+                }
+                receive_idx++;
+            }
+        }
+        
+        if(pivot[i] > 0)
+        {//safe check
+            MPI_Wait(&myRequest[(i*6)], MPI_STATUS_IGNORE);
+            MPI_Wait(&myRequest[(i*6)+1], MPI_STATUS_IGNORE);
+            MPI_Wait(&myRequest[(i*6)+2], MPI_STATUS_IGNORE);
+            MPI_Wait(&myRequest[(i*6)+3], MPI_STATUS_IGNORE);
+            MPI_Wait(&myRequest[(i*6)+4], MPI_STATUS_IGNORE);
+            MPI_Wait(&myRequest[(i*6)+5], MPI_STATUS_IGNORE);
+        }
+    }
+    
+    for(int i=0; i<3;i++)
+    {
+        free(tbuffer[i]);
+    }
+    free(pivot);
+    free(rcvpivot);
+    free(tid_buffer);
+    free(rcvtid_buffer);
+    free(vbuffer);
+    free(send_idx);
+    free(myRequest);
+    free(myrvRequest);
 }
 
 /* free load balancer */
