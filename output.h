@@ -4,7 +4,9 @@
 #include <limits.h>
 #include <float.h>
 #include "error.h"
+#include "loba.h"
+#include <zoltan.h>
 
-void write_pointsVTK(int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], iREAL lo[3], iREAL hi[3], unsigned int timesteps);
+void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], unsigned int timesteps);
 
 void postProcessing(int nranks, unsigned int long long size, unsigned int timesteps);

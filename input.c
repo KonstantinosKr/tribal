@@ -1,117 +1,183 @@
 #include "input.h" 
 
-unsigned int load_pointsVTK(iREAL *t[3][3], unsigned int tid[], iREAL *mint, iREAL *maxt)
+unsigned int load_enviroment(unsigned int ptype[], unsigned int nParticles, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
 {
-    FILE *fp1 = fopen("input/input.vtk", "r");
-    unsigned int nt;
-    if( fp1 == NULL )
-    {
-        perror("Error while opening the file.\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    char ch, word[100];
-    double *point[3];
-    
-    do {
-        ch = fscanf(fp1,"%s",word);
-        if(strcmp(word, "POINTS")==0)
-        {
-            //printf("found!\n");
-            ch = fscanf(fp1,"%s",word);
-            unsigned int n = atoi(word);
-            //get points
-            ch = fscanf(fp1,"%s",word);
-            
-            ERRMEM (point[0] = (double *)malloc (sizeof(double[n])));
-            ERRMEM (point[1] = (double *)malloc (sizeof(double[n])));
-            ERRMEM (point[2] = (double *)malloc (sizeof(double[n])));
-            
-            *mint = DBL_MAX;
-            *maxt = DBL_MIN;
-            for(unsigned int i=0;i<n;i++)
-            {
-                ch = fscanf(fp1, "%s", word);
-                point[0][i] = atof(word);
-                ch = fscanf(fp1, "%s", word);
-                point[1][i] = atof(word);
-                ch = fscanf(fp1, "%s", word);
-                point[2][i] = atof(word);
-                //printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
-                
-                if(point[0][i] < *mint) 
-                {
-                  *mint = point[0][i];
-                }
+  unsigned int nt = 0;
 
-                if(point[1][i] < *mint) 
-                {
-                  *mint = point[1][i];
-                }
+  for(unsigned int i = 0; i < nParticles; i++)
+  {
+    nt = nt + load_points(ptype[i], i, nt, t, tid, pid, mint, maxt);
+  }
+  return nt;
+}
 
-                if(point[2][i] < *mint)
-                {
-                  *mint = point[2][i];
-                }
+/*
+void save_enviroment()
+{
 
-                /////////////////////
-                
-                if(point[0][i] > *maxt) 
-                {
-                  *maxt = point[0][i];
-                }
 
-                if(point[1][i] > *maxt) 
-                {
-                  *maxt = point[1][i];
-                }
+}
 
-                if(point[2][i] > *maxt)
-                {
-                  *maxt = point[2][i];
-                }
-            }
-        }
-        if(strcmp(word, "CELLS")==0)
-        { 
-            ch = fscanf(fp1,"%s",word);
-            unsigned int n = atoi(word);
-            nt = n;
-            ch = fscanf(fp1,"%s",word);
-            printf(":::%u::\n",n);
-            for(unsigned int i=0;i<n;i++)
-            {
-                ch = fscanf(fp1,"%s",word);
-                ch = fscanf(fp1,"%s",word);
-                
-                unsigned int index = atoi(word);
-                t[0][0][i] = point[0][index];
-                t[0][1][i] = point[1][index];
-                t[0][2][i] = point[2][index];
-                
-                //printf("idx:%s T[0][0] = %f | T[0][1] = %f | T[0][2] = %f\n", word, t[0][0][i], t[0][1][i], t[0][2][i]);
-                
-                ch = fscanf(fp1,"%s",word);
-                index = atoi(word);
-                t[1][0][i] = point[0][index];
-                t[1][1][i] = point[1][index];
-                t[1][2][i] = point[2][index];
-                
-                //printf("idx:%s T[1][0] = %f | T[1][1] = %f | T[1][2] = %f\n", word, t[1][0][i], t[1][1][i], t[1][2][i]);
-                
-                ch = fscanf(fp1,"%s",word);
-                index = atoi(word);
-                t[2][0][i] = point[0][index];
-                t[2][1][i] = point[1][index];
-                t[2][2][i] = point[2][index];
-                
-                //printf("idx:%s T[2][0] = %f | T[2][1] = %f | T[2][2] = %f\n", word, t[2][0][i], t[2][1][i], t[2][2][i]);
-                
-                tid[i] = i;
-            }
-        }
-    } while (ch != EOF);
-    return nt;
+void resize_enviroment()
+{
+
+}
+
+void translate_enviroment()
+{
+  
+}
+
+void init_enviroment()
+{
+
+
+}
+*/
+
+unsigned int load_points(unsigned int ptype, unsigned int bodyID, unsigned int startIDX, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
+{
+  //////////VTK format////////////
+
+  //Input Type
+  //0: Triangulated Mesh
+  //1: Triangle
+  //2: Sphere
+  //3: Square
+  //4: Hexahedron
+  
+  FILE *fp1;
+  if(ptype == 0)
+  {
+    char filename[100] = "input/mesh";
+    char strtmp[100];
+    sprintf(strtmp, "%i.vtk", bodyID);
+    strcat(filename, strtmp);
+    fp1 = fopen(filename, "r");
+    printf("%s\n", filename);
+  } else if(ptype == 1)
+  {
+    fp1 = fopen("input/shapes/triangle.vtk", "r");
+  } else if(ptype == 2)
+  {
+    fp1 = fopen("input/shapes/sphere.vtk", "r");
+  } else if(ptype == 3)
+  {
+    fp1 = fopen("input/shapes/square.vtk", "r");
+  } else if(ptype == 4)
+  {
+    fp1 = fopen("input/shapes/hexahedron.vtk", "r");
+  }
+  if( fp1 == NULL )
+  {
+      perror("Error while opening the file.\n");
+      exit(EXIT_FAILURE);
+  }
+  
+  char ch, word[100];
+  double *point[3];
+  unsigned int nt = 0;
+  
+  do {
+      ch = fscanf(fp1,"%s",word);
+      if(strcmp(word, "POINTS")==0)
+      {
+          //printf("found!\n");
+          ch = fscanf(fp1,"%s",word);
+          unsigned int n = atoi(word);
+          //get points
+          ch = fscanf(fp1,"%s",word);
+          
+          ERRMEM (point[0] = (double *)malloc (sizeof(double[n])));
+          ERRMEM (point[1] = (double *)malloc (sizeof(double[n])));
+          ERRMEM (point[2] = (double *)malloc (sizeof(double[n])));
+          
+          *mint = DBL_MAX;
+          *maxt = DBL_MIN;
+          for(unsigned int i=0;i<n;i++)
+          {
+              ch = fscanf(fp1, "%s", word);
+              point[0][i] = atof(word);
+              ch = fscanf(fp1, "%s", word);
+              point[1][i] = atof(word);
+              ch = fscanf(fp1, "%s", word);
+              point[2][i] = atof(word);
+              //printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
+              
+              if(point[0][i] < *mint) 
+              {
+                *mint = point[0][i];
+              }
+
+              if(point[1][i] < *mint) 
+              {
+                *mint = point[1][i];
+              }
+
+              if(point[2][i] < *mint)
+              {
+                *mint = point[2][i];
+              }
+
+              /////////////////////
+              
+              if(point[0][i] > *maxt) 
+              {
+                *maxt = point[0][i];
+              }
+
+              if(point[1][i] > *maxt) 
+              {
+                *maxt = point[1][i];
+              }
+
+              if(point[2][i] > *maxt)
+              {
+                *maxt = point[2][i];
+              }
+          }
+      }
+      if(strcmp(word, "CELLS")==0)
+      { 
+          ch = fscanf(fp1,"%s",word);
+          unsigned int n = atoi(word);
+          nt = n;
+          ch = fscanf(fp1,"%s",word);
+          printf(":::%u::\n",n);
+          for(unsigned int i=startIDX;i<startIDX+n;i++)
+          {
+              ch = fscanf(fp1,"%s",word);
+              ch = fscanf(fp1,"%s",word);
+              
+              unsigned int index = atoi(word);
+              t[0][0][i] = point[0][index];
+              t[0][1][i] = point[1][index];
+              t[0][2][i] = point[2][index];
+              
+              //printf("idx:%s T[0][0] = %f | T[0][1] = %f | T[0][2] = %f\n", word, t[0][0][i], t[0][1][i], t[0][2][i]);
+              
+              ch = fscanf(fp1,"%s",word);
+              index = atoi(word);
+              t[1][0][i] = point[0][index];
+              t[1][1][i] = point[1][index];
+              t[1][2][i] = point[2][index];
+              
+              //printf("idx:%s T[1][0] = %f | T[1][1] = %f | T[1][2] = %f\n", word, t[1][0][i], t[1][1][i], t[1][2][i]);
+              
+              ch = fscanf(fp1,"%s",word);
+              index = atoi(word);
+              t[2][0][i] = point[0][index];
+              t[2][1][i] = point[1][index];
+              t[2][2][i] = point[2][index];
+              
+              //printf("idx:%s T[2][0] = %f | T[2][1] = %f | T[2][2] = %f\n", word, t[2][0][i], t[2][1][i], t[2][2][i]);
+              
+              tid[i] = i;
+              pid[i] = bodyID;
+          }
+      }
+  } while (ch != EOF);
+  return nt;
 }
 
 void normalize(unsigned int nt, iREAL *t[3][3], iREAL mint, iREAL maxt) 

@@ -1,8 +1,11 @@
 #include "output.h"
 
-void write_pointsVTK(int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], iREAL lo[3], iREAL hi[3], unsigned int timesteps)
+void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], unsigned int timesteps)
 {
-    char iter[15];
+    iREAL lo[3], hi[3]; 
+    loba_getbox (lb, myrank, lo, hi);//get local subdomain boundary box
+    
+    char iter[100];
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
     char filename[100] = "output/mpi/output"; //care or buffer overflow
     strcat(filename, iter);

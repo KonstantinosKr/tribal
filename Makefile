@@ -1,5 +1,5 @@
 # C files
-C_SRC=motion.c input.c output.c loba.c contact.c tribal.c 
+C_SRC=motion.c input.c output.c loba.c contact.c tribal.c migration.c 
 
 # ISPC files
 ISPC_SRC= tribal.ispc bf.ispc

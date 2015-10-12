@@ -8,8 +8,7 @@ unsigned int contact_distance (unsigned int start, unsigned int end, unsigned lo
 {
   unsigned int index;
   unsigned int nt = end-start;
-  iREAL *d[3], *e[3], *f[3];
-  iREAL *pp[3], *qq[3];
+  iREAL *d[3], *e[3], *f[3], *pp[3], *qq[3];
   
   //allocate memory
   for(int i=0;i<3;i++)

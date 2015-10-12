@@ -328,7 +328,7 @@ void loba_getbox (struct loba *lb, int part, iREAL lo[3], iREAL hi[3])
   }
 }
 
-void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], iREAL *distance, unsigned int *tid, unsigned int *pid)
+void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], iREAL *p[3], iREAL *q[3], iREAL *distance, unsigned int *tid, unsigned int *pid)
 {
     int nproc;
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -340,14 +340,12 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
     tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
     tbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
     vbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-    
-    
+     
     iREAL *trvbuffer[3], *vrvbuffer;
     trvbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
     trvbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
     trvbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
     vrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-    
     
     send_idx = (int **) malloc(nproc*sizeof(int*));
     
@@ -401,7 +399,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
             }
         }
     }
-    
+
     MPI_Request *myRequest = (MPI_Request*) malloc(nNeighbors*6*sizeof(MPI_Request));//6 sends
     MPI_Request *myrvRequest = (MPI_Request*) malloc(nNeighbors*6*sizeof(MPI_Request));//6 sends
     
@@ -440,11 +438,11 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
             MPI_Isend(&tbuffer[2][(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 4, MPI_COMM_WORLD, &myRequest[(i*6)+3]);
             
             MPI_Isend(&vbuffer[(proc*size*3)], pivot[i]*3, MPI_DOUBLE, proc, 5, MPI_COMM_WORLD, &myRequest[(i*6)+4]);
-            MPI_Isend(&pid_buffer[1][0], pivot[i], MPI_INT, proc, 6, MPI_COMM_WORLD, &myRequest[(i*6)+5]);
+            MPI_Isend(&pid_buffer[i][0], pivot[i], MPI_INT, proc, 6, MPI_COMM_WORLD, &myRequest[(i*6)+5]);
         }
     }
     
-    //contact_distance(*nt, t, p, q, distance);
+    contact_distance(0, *nt, size, t, p, q, distance);
     
     unsigned int receive_idx = *nt; //set to last id
     for(int i=0;i<nNeighbors;i++)
@@ -485,6 +483,8 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
             MPI_Wait(&myRequest[(i*6)+5], MPI_STATUS_IGNORE);
         }
     }
+    
+    //contact_distance(*nt, receive_idx, size, t, p, q, distance);
     
     for(int i=0; i<3;i++)
     {
