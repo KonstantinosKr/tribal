@@ -441,8 +441,9 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
         MPI_Isend(&pid_buffer[i][0], pivot[i], MPI_INT, proc, 6, MPI_COMM_WORLD, &myRequest[(i*6)+5]);
       }
     }
-    
-    contact_distance(0, *nt, size, t, p, q, distance);
+   
+    //all to all
+    contact_detection (0, *nt, 0, *nt, size, t, p, q, distance);
     
     unsigned int receive_idx = *nt; //set to last id
     for(int i=0;i<nNeighbors;i++)
@@ -484,7 +485,8 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
       }
     }
     
-    //contact_distance(0, receive_idx, size, t, p, q, distance);
+    //range s1-e1 is outter loop, s2-e2 is inner loop in the traversal
+    contact_detection (0, *nt, *nt, receive_idx, size, t, p, q, distance);
     
     for(int i=0; i<3;i++)
     {

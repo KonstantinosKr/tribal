@@ -27,7 +27,7 @@ int main (int argc, char **argv)
   iREAL lo[3] = {-255, -255, -255}; /* lower corner */
   iREAL hi[3] = {255, 255, 255}; /* upper corner */
   
-  unsigned int nParticles = 1;
+  unsigned int nParticles = 7;
   unsigned int size = LARGENUM; /* memory buffer size */
   int nprocs;
   int myrank;
@@ -70,8 +70,13 @@ int main (int argc, char **argv)
   //4: Hexahedron
   
     unsigned int *ptype = (unsigned int *) malloc (sizeof(int[nParticles]));
-    ptype[0] = 3;
-    //ptype[1] = 0;
+    ptype[0] = 0;
+    ptype[1] = 0;
+    ptype[2] = 0;
+    ptype[3] = 0;
+    ptype[4] = 0;
+    ptype[5] = 0;
+    ptype[6] = 0;
 
     nt = load_enviroment(ptype, nParticles, t, tid, pid, &mint, &maxt);
     

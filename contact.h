@@ -4,6 +4,6 @@
 #include "bf_ispc.h"
 
 /* calculate distances */
-unsigned int contact_distance (unsigned int start, unsigned int end, unsigned long long int size, iREAL *t[3][3], iREAL *p[3], iREAL *q[3], iREAL *distance);
+void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsigned int e2,  unsigned long long int size, iREAL *t[3][3], iREAL *p[3], iREAL *q[3], iREAL *distance);
 
 #endif
