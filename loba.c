@@ -460,7 +460,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
             for(unsigned int j=0;j<rcvpivot[i];j++)
             {
                 tid[receive_idx] = rcvtid_buffer[i][j]; //tids to imported
-                
+                pid[receive_idx] = rcvpid_buffer[i][j]; 
                 for(int k=0;k<3;k++)
                 {
                     t[0][k][receive_idx] = trvbuffer[0][(proc*size*3)+(j*3)+(k)];
@@ -484,7 +484,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned long long int siz
         }
     }
     
-    //contact_distance(*nt, receive_idx, size, t, p, q, distance);
+    //contact_distance(0, receive_idx, size, t, p, q, distance);
     
     for(int i=0; i<3;i++)
     {

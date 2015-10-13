@@ -12,19 +12,21 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
   MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
   
   //allocate memory for tmp buffers
-  int **send_idx, *pivot, *tid_buffer; 
+  int **send_idx, *pivot, *pid_buffer, *rcvpid_buffer; 
   iREAL *tbuffer[3], *vbuffer;
   tbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   tbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
   vbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  pid_buffer = (int *) malloc(nproc*size*3*sizeof(int));
 
   int *rcvpivot;
-  iREAL *trvbuffer[3], *vrvbuffer, *prvbuffer, *qrvbuffer;
+  iREAL *trvbuffer[3], *vrvbuffer;
   trvbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   trvbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   trvbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
   vrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
+  rcvpid_buffer = (int *) malloc(nproc*size*3*sizeof(int));
   
   send_idx = (int **) malloc(nproc*sizeof(int*));
   pivot = (int *) malloc(nproc*sizeof(int));
@@ -100,12 +102,13 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
         ///printf("POSITION:%i\n\n", (j*3)+k);
         vbuffer[(i*size*3)+(j*3)+(k)] = v[k][send_idx[i][j]];
       }
+        pid_buffer[(i*size*3)+(j*3)] = pid[send_idx[i][j]];
     }
   }
 
   ///////////////////////////////////////////////
   //refine local arrays and ids (memory gaps)
-  unsigned int pv=*nt;
+  unsigned int pv=*nt-1;
   for(unsigned int i=0;i<num_export;i++)
   {//be cautious bug may be hidden here;
   
@@ -115,13 +118,15 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
       {
         tid[export_local_ids[i]] = tid[j]; //send from 'last to first' the tids to 'first to last' in tid array
         tid[j] = UINT_MAX; //mark moved tid
+        pid[export_local_ids[i]] = pid[j];
+        pid[j] = UINT_MAX;
         for(int k=0;k<3;k++)
         {
           t[0][k][export_local_ids[i]] = t[0][k][j];
           t[1][k][export_local_ids[i]] = t[1][k][j];
           t[2][k][export_local_ids[i]] = t[2][k][j];
           
-          v[k][export_local_ids[i]] = v[k][j]; 
+          v[k][export_local_ids[i]] = v[k][j];
         }
         break;//break loop/search from 'last to first' and go to next id that was exported
       }

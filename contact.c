@@ -57,7 +57,7 @@ unsigned int contact_distance (unsigned int start, unsigned int end, unsigned lo
       
     for(unsigned int j=0;j<nt;j++)
     {
-      p[0][(i*size)+j]= pp[0][j]; 
+      /*p[0][(i*size)+j]= pp[0][j]; 
       p[1][(i*size)+j]= pp[1][j]; 
       p[2][(i*size)+j]= pp[2][j]; 
         
@@ -70,6 +70,7 @@ unsigned int contact_distance (unsigned int start, unsigned int end, unsigned lo
       {
         distance[(i*size)+j] = dist;
       }
+      */
     }
   }
   return index;

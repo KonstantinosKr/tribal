@@ -27,7 +27,7 @@ int main (int argc, char **argv)
   iREAL lo[3] = {-255, -255, -255}; /* lower corner */
   iREAL hi[3] = {255, 255, 255}; /* upper corner */
   
-  unsigned int nParticles = 2;
+  unsigned int nParticles = 1;
   unsigned int size = LARGENUM; /* memory buffer size */
   int nprocs;
   int myrank;
@@ -58,15 +58,20 @@ int main (int argc, char **argv)
     ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
     
-    for(unsigned int i=0;i<size;i++) {
-      tid[i] = UINT_MAX; 
-    }
+    for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX; 
     
     iREAL mint, maxt;
     
+  //Input Type
+  //0: Triangulated Mesh
+  //1: Triangle
+  //2: Sphere
+  //3: Square
+  //4: Hexahedron
+  
     unsigned int *ptype = (unsigned int *) malloc (sizeof(int[nParticles]));
-    ptype[0] = 0;
-    ptype[1] = 0;
+    ptype[0] = 3;
+    //ptype[1] = 0;
 
     nt = load_enviroment(ptype, nParticles, t, tid, pid, &mint, &maxt);
     
@@ -117,12 +122,13 @@ int main (int argc, char **argv)
                   &import_global_ids, &import_local_ids, 
                   &export_global_ids, &export_local_ids);
     
+
     migrate_triangles (size, &nt, t, v, tid, pid, 
                         num_import, import_procs, 
                         num_export, export_procs, 
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
-    
+
     loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
     integrate (step, lo, hi, nt, t, v);
