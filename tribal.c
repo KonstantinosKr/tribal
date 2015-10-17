@@ -127,19 +127,17 @@ int main (int argc, char **argv)
                   &import_global_ids, &import_local_ids, 
                   &export_global_ids, &export_local_ids);
     
-
     migrate_triangles (size, &nt, t, v, tid, pid, 
                         num_import, import_procs, 
                         num_export, export_procs, 
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
-
+    
     loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
     integrate (step, lo, hi, nt, t, v);
-    
+
     output_state(lb, myrank, nt, t, v, timesteps);
-      
     timesteps++;
   }
   
@@ -147,8 +145,8 @@ int main (int argc, char **argv)
   if(myrank == 0)//have to make sure all ranks finished
   {
     printf("Computation Finished.\n");
-    postProcessing(nprocs, size, timesteps);
-    printf("Post-Processing Finished.\n");
+    //postProcessing(nprocs, size, timesteps);
+    //printf("Post-Processing Finished.\n");
   }
 
   /* finalise */

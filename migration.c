@@ -215,7 +215,6 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
     MPI_Wait(&myRequest[(x*6)+0], MPI_STATUS_IGNORE);
   }
   
-  
   for(int x=0;x<num_import_unique;x++)
   {
     int i = import_unique_procs[x];  
@@ -281,8 +280,14 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
     free(trvbuffer[i]);
   }
     free(pivot);
+    free(rcvpivot);
+     
+    free(pid_buffer);
+    free(rcvpid_buffer);   
+
     free(vbuffer);
     free(vrvbuffer);
+    
     free(send_idx); 
     free(myRequest);
     free(myrvRequest);
