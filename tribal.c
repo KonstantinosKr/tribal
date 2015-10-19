@@ -13,7 +13,7 @@
 #include "motion.h"
 #include "migration.h"
 
-#define LARGENUM 2000000 //2 million
+#define LARGENUM 10000000 //20 million
 
 int main (int argc, char **argv)
 {
@@ -21,14 +21,14 @@ int main (int argc, char **argv)
   iREAL *v[3]; /* velocities */
   iREAL *distance; /*distance */
   iREAL *p[3],*q[3];//p and q points
-  unsigned int nt; /* number of triangles */
-  unsigned int *pid; /*particle identifier */
-  unsigned int *tid; /* triangle identifiers */
+  unsigned long long int nt; /* number of triangles */
+  unsigned long long int *pid; /*particle identifier */
+  unsigned long long int *tid; /* triangle identifiers */
   iREAL lo[3] = {-255, -255, -255}; /* lower corner */
   iREAL hi[3] = {255, 255, 255}; /* upper corner */
   
-  unsigned int nParticles = 7;
-  unsigned int size = LARGENUM; /* memory buffer size */
+  unsigned int nParticles = 9;
+  unsigned long long int size = LARGENUM; /* memory buffer size */
   int nprocs;
   int myrank;
 
@@ -55,8 +55,8 @@ int main (int argc, char **argv)
       ERRMEM (q[i] = (iREAL *) malloc (sizeof(iREAL[size*size])));
     }
     ERRMEM (distance = (iREAL *) malloc (sizeof(iREAL[size*size])));
-    ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-    ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
+    ERRMEM (tid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
+    ERRMEM (pid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
     
     for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX; 
     
@@ -69,7 +69,7 @@ int main (int argc, char **argv)
   //3: Square
   //4: Hexahedron
   
-    unsigned int *ptype = (unsigned int *) malloc (sizeof(int[nParticles]));
+    unsigned int *ptype = (unsigned int *) malloc (sizeof(unsigned int[nParticles]));
     ptype[0] = 0;
     ptype[1] = 0;
     ptype[2] = 0;
@@ -77,6 +77,15 @@ int main (int argc, char **argv)
     ptype[4] = 0;
     ptype[5] = 0;
     ptype[6] = 0;
+    ptype[7] = 0;
+    ptype[8] = 0;
+    //ptype[9] = 0;
+    //ptype[10] = 0;
+    //ptype[11] = 0;
+    //ptype[12] = 0;
+    //ptype[13] = 0;
+    //ptype[14] = 0;
+    //ptype[15] = 0;
 
     nt = load_enviroment(ptype, nParticles, t, tid, pid, &mint, &maxt);
     
@@ -98,23 +107,24 @@ int main (int argc, char **argv)
       ERRMEM (v[i] = (iREAL *) malloc (sizeof(iREAL[size])));
       
       ERRMEM (p[i] = (iREAL *) malloc (sizeof(iREAL[size*size])));
-      ERRMEM (q[i] = (iREAL *) malloc (sizeof(iREAL[size*size])));
+      ERRMEM (q[i] = (iREAL *) malloc (sizeof(iREAL[size*size*size])));
     }
     ERRMEM (distance = (iREAL*) malloc (sizeof(iREAL[size*size])));
-    ERRMEM (tid = (unsigned int *) malloc (sizeof(unsigned int[size])));
-    ERRMEM (pid = (unsigned int *) malloc (sizeof(unsigned int[size])));
+    ERRMEM (tid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
+    ERRMEM (pid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
       
-    for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX;
+    for(unsigned long long int i=0;i<size;i++) tid[i] = UINT_MAX;
   }
   
-  int num_import, *import_procs, num_export, *export_procs;
+  int num_import, num_export;
+  int *import_procs, *export_procs;
   ZOLTAN_ID_PTR import_global_ids, import_local_ids, export_global_ids, export_local_ids;
   
   /* create load balancer */
   struct loba *lb = loba_create (ZOLTAN_RCB);
 
   /* perform time stepping */
-  iREAL step = 1E-3, time; unsigned int timesteps=0;
+  iREAL step = 1E-3, time; unsigned long long int timesteps=0;
   
   //for (time = 0.0; time < 1.0; time += step)
   for(time = 0; time < 100; time++)
@@ -126,17 +136,23 @@ int main (int argc, char **argv)
                   &num_export, &export_procs, 
                   &import_global_ids, &import_local_ids, 
                   &export_global_ids, &export_local_ids);
-    
+  if(myrank == 0) 
+  printf("passed load balance\n"); 
     migrate_triangles (size, &nt, t, v, tid, pid, 
                         num_import, import_procs, 
                         num_export, export_procs, 
                         import_global_ids, import_local_ids, 
                         export_global_ids, export_local_ids);
-    
+  if(myrank == 0) 
+   printf("passed migration\n"); 
     loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
+  if(myrank == 0) 
+   printf("passed data exchange\n"); 
     integrate (step, lo, hi, nt, t, v);
 
+  if(myrank == 0) 
+   printf("passed data exchange\n"); 
     output_state(lb, myrank, nt, t, v, timesteps);
     timesteps++;
   }

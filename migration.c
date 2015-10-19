@@ -1,8 +1,8 @@
 #include "migration.h"
 
 /* migrate triangles "in-place" to new ranks */
-void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3],
-                              unsigned int *tid, unsigned int *pid,  
+void migrate_triangles (unsigned long long int size, unsigned long long int *nt, iREAL *t[3][3], iREAL *v[3],
+                              unsigned long long int *tid, unsigned long long int *pid,  
                               int num_import, int *import_procs, int num_export, int *export_procs, 
                               ZOLTAN_ID_PTR import_global_ids, ZOLTAN_ID_PTR import_local_ids,
                               ZOLTAN_ID_PTR export_global_ids, ZOLTAN_ID_PTR export_local_ids)
@@ -12,32 +12,31 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
   MPI_Comm_rank (MPI_COMM_WORLD, &myrank);
   
   //allocate memory for tmp buffers
-  int **send_idx, *pivot, *pid_buffer, *rcvpid_buffer; 
-  iREAL *tbuffer[3], *vbuffer;
+  unsigned long long int **send_idx, *pivot, *rcvpivot, *pid_buffer, *rcvpid_buffer; 
+  iREAL *tbuffer[3], *vbuffer, *trvbuffer[3], *vrvbuffer; 
+
   tbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   tbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   tbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
   vbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  pid_buffer = (int *) malloc(nproc*size*3*sizeof(int));
+  pid_buffer = (unsigned long long int *) malloc(nproc*size*3*sizeof(unsigned long long int));
 
-  int *rcvpivot;
-  iREAL *trvbuffer[3], *vrvbuffer;
   trvbuffer[0] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   trvbuffer[1] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
   trvbuffer[2] = (iREAL *) malloc(nproc*size*3*sizeof(iREAL)); 
   vrvbuffer = (iREAL *) malloc(nproc*size*3*sizeof(iREAL));
-  rcvpid_buffer = (int *) malloc(nproc*size*3*sizeof(int));
+  rcvpid_buffer = (unsigned long long int *) malloc(nproc*size*3*sizeof(unsigned long long int));
   
-  send_idx = (int **) malloc(nproc*sizeof(int*));
-  pivot = (int *) malloc(nproc*sizeof(int));
+  send_idx = (unsigned long long int **) malloc(nproc*sizeof(unsigned long long int*));
+  pivot = (unsigned long long int *) malloc(nproc*sizeof(unsigned long long int));
 
-  rcvpivot = (int *) malloc(nproc*sizeof(int));
+  rcvpivot = (unsigned long long int *) malloc(nproc*sizeof(unsigned long long int));
 
   for(int i=0;i<nproc;i++)
   {
     rcvpivot[i] = 0;
     pivot[i] = 0;
-    send_idx[i] = (int *) malloc(size*sizeof(int));
+    send_idx[i] = (unsigned long long int *) malloc(size*sizeof(unsigned long long int));
   }
 
   //prepare export buffers
@@ -46,8 +45,8 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
   {
     export_unique_procs[i] = -1;
   }
-  int num_export_unique=0;//number of unique ids to export
-  int idx=0;
+  unsigned long long int num_export_unique=0;//number of unique ids to export
+  unsigned long long int idx=0;
   for (unsigned int i = 0; i < num_export; i++)//loop through export data/ids 
   {
     int proc = export_procs[i]; //proc is the export process for data id[i]
@@ -73,7 +72,7 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
       { //sort binary-style
         if(export_unique_procs[idx-2] > export_unique_procs[idx-1])
         {//swap
-          int tmp = export_unique_procs[idx-2];
+          unsigned int tmp = export_unique_procs[idx-2];
           export_unique_procs[idx-2] = export_unique_procs[idx-1];
           export_unique_procs[idx-1] = tmp;
         }
@@ -91,7 +90,7 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
   //assign values to tmp export buffers
   for(int i=0;i<nproc;i++)//n processes to prepare buffers for
   {
-    for(unsigned int j=0;j<pivot[i];j++)//pivot gives n number of ids to loop through
+    for(unsigned long long int j=0;j<pivot[i];j++)//pivot gives n number of ids to loop through
     {
       for(int k=0;k<3;k++)//loop through the xyz axis
       {
@@ -109,11 +108,11 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
 
   ///////////////////////////////////////////////
   //refine local arrays and ids (memory gaps)
-  unsigned int pv=*nt-1;
-  for(unsigned int i=0;i<num_export;i++)
+  unsigned long long int pv=*nt-1;
+  for(unsigned long long int i=0;i<num_export;i++)
   {//be cautious bug may be hidden here;
   
-    for(unsigned int j=pv;j>export_local_ids[i];j--)//from last towards first but only until gap of exported
+    for(unsigned long long int j=pv;j>export_local_ids[i];j--)//from last towards first but only until gap of exported
     {
       if(tid[j] != UINT_MAX)//if not marked as to be exported switch fill gaps
       {
@@ -141,9 +140,9 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
   {
     import_unique_procs[i] = -1;
   }
-  int num_import_unique=0;
+  unsigned long long int num_import_unique=0;
   idx=0;
-  unsigned int receive_idx=0;
+  unsigned long long int receive_idx=0;
   if(*nt > 0 && num_export > 0) 
   {
     receive_idx = *nt - num_export; //set to last id
@@ -151,11 +150,11 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
     receive_idx = *nt;
   }
 
-  for(unsigned int i=0; i < num_import; i++) //loop throught imports
+  for(unsigned long long int i=0; i < num_import; i++) //loop throught imports
   {
     int proc = import_procs[i]; //get process of import id i
     int exists = 0; //set exists to unknown
-    for(unsigned int j = 0; j < nproc; j++) //loop through until idx reached
+    for(unsigned long long int j = 0; j < nproc; j++) //loop through until idx reached
     {
       if(proc == import_unique_procs[j])
       {
@@ -173,7 +172,7 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
       { //sort
         if(import_unique_procs[idx-2] > import_unique_procs[idx-1])
         {//swap
-          int tmp = import_unique_procs[idx-2];
+          unsigned long long int tmp = import_unique_procs[idx-2];
           import_unique_procs[idx-2] = import_unique_procs[idx-1];
           import_unique_procs[idx-1] = tmp;
         }
@@ -248,7 +247,7 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
     MPI_Wait(&myrvRequest[(x*6)+5], MPI_STATUS_IGNORE);
     int i = import_unique_procs[x];
 
-    for(unsigned int j=0;j<rcvpivot[i];j++)
+    for(unsigned long long int j=0;j<rcvpivot[i];j++)
     {
       pid[receive_idx] = rcvpid_buffer[(i*size)+j];
       for(int k=0;k<3;k++)
@@ -291,4 +290,6 @@ void migrate_triangles (unsigned long long int size, unsigned int *nt, iREAL *t[
     free(send_idx); 
     free(myRequest);
     free(myrvRequest);
+    free(export_unique_procs);
+    free(import_unique_procs);
 }

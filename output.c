@@ -1,13 +1,13 @@
 #include "output.h"
 
-void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], unsigned int timesteps)
+void output_state(struct loba *lb, int myrank, unsigned long long int nt, iREAL *t[3][3], iREAL *v[3], unsigned long long int timesteps)
 {
     iREAL lo[3], hi[3]; 
     loba_getbox (lb, myrank, lo, hi);//get local subdomain boundary box
     
     char iter[100];
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
-    char filename[100] = "output/mpi/output"; //care or buffer overflow
+    char filename[100] = "/scratch/rfmw74/output"; //care or buffer overflow
     strcat(filename, iter);
     //printf("%s\n", filename);
       
@@ -20,7 +20,7 @@ void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], 
     
     fprintf(fp,"# vtk DataFile Version 2.0\nOutput vtk file\nASCII\n\nDATASET UNSTRUCTURED_GRID\nPOINTS %i float\n", (nt*3)+8);
       
-    unsigned int i;
+    unsigned long long int i;
     for(i = 0; i < nt; i++)
     {
       fprintf(fp,"%.5f %.5f %.5f\n%.5f %.5f %.5f\n%.5f %.5f %.5f\n", t[0][0][i], t[0][1][i], t[0][2][i], t[1][0][i], t[1][1][i], t[1][2][i], t[2][0][i], t[2][1][i], t[2][2][i]);
@@ -64,8 +64,8 @@ void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], 
     //3. -> 7.
     //4. -> 8.
     //
-    unsigned int ii = i;
-    for(int j = 0; j < 3; j++)
+    unsigned long long int ii = i;
+    for(unsigned long long int j = 0; j < 3; j++)
     {
       fprintf(fp, "2 %i %i\n", i, i+1);
       fprintf(fp, "2 %i %i\n", i+4, i+4+1);
@@ -92,7 +92,7 @@ void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], 
     fclose(fp);
 }
 
-void postProcessing(int nranks, unsigned int long long size, unsigned int timesteps)
+void postProcessing(int nranks, unsigned long long int size, unsigned long long int timesteps)
 {
     double *point[3];
     int *cells[5];
@@ -118,7 +118,7 @@ void postProcessing(int nranks, unsigned int long long size, unsigned int timest
       for(int j=0; j<nranks; j++)
       {
         char ch, word[100];
-        char filename[100] = "output/mpi/output";
+        char filename[100] = "scratch/rfmw74/output/output";
         char str[500];
         sprintf(str, "%i_%i.vtk", ii, j);
         strcat(filename, str);
@@ -190,7 +190,7 @@ void postProcessing(int nranks, unsigned int long long size, unsigned int timest
         //
         char iter[15];
         sprintf(iter, "%i.vtk", ii);
-        char filename[500] = "output/mergedmpi/output"; //care or buffer overflow
+        char filename[500] = "scratch/rfmw74/output"; //care or buffer overflow
         strcat(filename, iter);
         //printf("%s\n", filename);
         

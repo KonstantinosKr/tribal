@@ -4,6 +4,7 @@
 #include "algo.h"
 #include "math.h"
 
+using namespace ispc;
 //s1 and e1 mean start of section 1 and end of section 1, same for s2,e2 and nt size nts1, nts2
 void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsigned int e2,  unsigned long long int size, iREAL *t[3][3], iREAL *p[3], iREAL *q[3], iREAL *distance)
 {
@@ -58,7 +59,7 @@ void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsig
     c[2] = t[2][2][i];
     
     unsigned nt = e2-s2;
-    ispc_bf (nt, a, b, c, d, e, f, pp, qq);//use tasks 
+   // ispc_bf (nt, a, b, c, d, e, f, pp, qq);//use tasks 
     
     nt = 0;//use as counter
     for(unsigned int j=s2;j<e2;j++)
@@ -78,6 +79,16 @@ void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsig
       }
       nt++;
     }
+  }
+
+
+  for(int i=0;i<3;i++)
+  {  
+    free(d[i]); 
+    free(e[i]);
+    free(f[i]);
+    free(pp[i]);
+    free(qq[i]);
   }
 }
 
