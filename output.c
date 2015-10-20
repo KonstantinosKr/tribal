@@ -7,7 +7,7 @@ void output_state(struct loba *lb, int myrank, unsigned long long int nt, iREAL 
     
     char iter[100];
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
-    char filename[100] = "output/output/mpi"; //care or buffer overflow
+    char filename[100] = "output/mpi/output"; //care or buffer overflow
     strcat(filename, iter);
     //printf("%s\n", filename);
       

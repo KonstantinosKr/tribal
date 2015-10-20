@@ -139,7 +139,7 @@ int main (int argc, char **argv)
                         export_global_ids, export_local_ids);
   if(myrank == 0) 
    printf("passed migration\n"); 
-   // loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
+    loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
   if(myrank == 0) 
    printf("passed data exchange\n"); 
