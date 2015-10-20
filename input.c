@@ -1,14 +1,15 @@
 #include "input.h" 
 
-unsigned long long int load_enviroment(unsigned int ptype[], unsigned int nParticles, iREAL *t[3][3], unsigned long long int tid[], unsigned long long int pid[], iREAL *mint, iREAL *maxt)
+void load_enviroment(int ptype[], unsigned long long int *nt, unsigned long long int nParticles, iREAL *t[3][3], unsigned long long int tid[], unsigned long long int pid[], iREAL *mint, iREAL *maxt)
 {
-  unsigned long long int nt = 0;
-
+  unsigned long long int n = 0;
+  *nt = 0;
   for(unsigned long long int i = 0; i < nParticles; i++)
   {
-    nt = nt + load_points(ptype[i], i, nt, t, tid, pid, mint, maxt);
+    load_points(ptype[i], &n, i, *nt, t, tid, pid, mint, maxt);
+    *nt = n + *nt;
+    n = 0;
   }
-  return nt;
 }
 
 /*
@@ -35,7 +36,7 @@ void init_enviroment()
 }
 */
 
-unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsigned int startIDX, iREAL *t[3][3], unsigned long long int tid[], unsigned long long int pid[], iREAL *mint, iREAL *maxt)
+void load_points(int ptype, unsigned long long int *nt, unsigned long long int bodyID, unsigned long long int startIDX, iREAL *t[3][3], unsigned long long int tid[], unsigned long long int pid[], iREAL *mint, iREAL *maxt)
 {
   //////////VTK format////////////
 
@@ -46,6 +47,8 @@ unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsi
   //3: Square
   //4: Hexahedron
   
+  iREAL min = DBL_MAX;
+  iREAL max = DBL_MIN;
   FILE *fp1;
   if(ptype == 0)
   {
@@ -53,7 +56,7 @@ unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsi
     char strtmp[100];
     sprintf(strtmp, "%i.vtk", bodyID);
     strcat(filename, strtmp);
-    fp1 = fopen(filename, "r");
+    fp1 = fopen(filename, "r+");
     printf("%s\n", filename);
   } else if(ptype == 1)
   {
@@ -74,74 +77,68 @@ unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsi
       exit(EXIT_FAILURE);
   }
   
-  char ch, word[100];
-  double *point[3];
-  unsigned long long int nt = 0;
+  char ch, word[500];
+  iREAL *point[3];
   
   do {
       ch = fscanf(fp1,"%s",word);
       if(strcmp(word, "POINTS")==0)
       {
-          //printf("found!\n");
+          printf("found!\n");
           ch = fscanf(fp1,"%s",word);
-          unsigned long long int n = atoi(word);
+          unsigned long long int n = atol(word);
           //get points
           ch = fscanf(fp1,"%s",word);
+          //printf("will read: %llu\n",n); 
+          point[0] = (iREAL *)malloc (n*sizeof(iREAL));
+          point[1] = (iREAL *)malloc (n*sizeof(iREAL));
+          point[2] = (iREAL *)malloc (n*sizeof(iREAL));
           
-          ERRMEM (point[0] = (double *)malloc (sizeof(double[n])));
-          ERRMEM (point[1] = (double *)malloc (sizeof(double[n])));
-          ERRMEM (point[2] = (double *)malloc (sizeof(double[n])));
-          
-          *mint = DBL_MAX;
-          *maxt = DBL_MIN;
           for(unsigned long long int i=0;i<n;i++)
           {
-              ch = fscanf(fp1, "%s", word);
-              point[0][i] = atof(word);
-              ch = fscanf(fp1, "%s", word);
-              point[1][i] = atof(word);
-              ch = fscanf(fp1, "%s", word);
-              point[2][i] = atof(word);
+              fscanf(fp1, "%lf", &point[0][i]);
+              fscanf(fp1, "%lf", &point[1][i]);
+              fscanf(fp1, "%lf", &point[2][i]);
               //printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
               
-              if(point[0][i] < *mint) 
+              if(point[0][i] < min) 
               {
-                *mint = point[0][i];
+                min = point[0][i];
               }
 
-              if(point[1][i] < *mint) 
+              if(point[1][i] < min) 
               {
-                *mint = point[1][i];
+                min = point[1][i];
               }
 
-              if(point[2][i] < *mint)
+              if(point[2][i] < min)
               {
-                *mint = point[2][i];
+                min = point[2][i];
               }
 
               /////////////////////
               
-              if(point[0][i] > *maxt) 
+              if(point[0][i] > max) 
               {
-                *maxt = point[0][i];
+                max = point[0][i];
               }
 
-              if(point[1][i] > *maxt) 
+              if(point[1][i] > max) 
               {
-                *maxt = point[1][i];
+                max = point[1][i];
               }
 
-              if(point[2][i] > *maxt)
+              if(point[2][i] > max)
               {
-                *maxt = point[2][i];
+                max = point[2][i];
               }
           }
       }
       if(strcmp(word, "CELLS")==0)
       { 
           ch = fscanf(fp1,"%s",word);
-          unsigned long long int n = atoi(word);
-          nt = n;
+          unsigned long long int n = atol(word);
+          *nt = n;
           ch = fscanf(fp1,"%s",word);
           printf(":::%u::\n",n);
           for(unsigned long long int i=startIDX;i<startIDX+n;i++)
@@ -149,7 +146,7 @@ unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsi
               ch = fscanf(fp1,"%s",word);
               ch = fscanf(fp1,"%s",word);
               
-              unsigned long long int index = atoi(word);
+              unsigned long long int index = atol(word);
               t[0][0][i] = point[0][index];
               t[0][1][i] = point[1][index];
               t[0][2][i] = point[2][index];
@@ -157,7 +154,7 @@ unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsi
               //printf("idx:%s T[0][0] = %f | T[0][1] = %f | T[0][2] = %f\n", word, t[0][0][i], t[0][1][i], t[0][2][i]);
               
               ch = fscanf(fp1,"%s",word);
-              index = atoi(word);
+              index = atol(word);
               t[1][0][i] = point[0][index];
               t[1][1][i] = point[1][index];
               t[1][2][i] = point[2][index];
@@ -165,7 +162,7 @@ unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsi
               //printf("idx:%s T[1][0] = %f | T[1][1] = %f | T[1][2] = %f\n", word, t[1][0][i], t[1][1][i], t[1][2][i]);
               
               ch = fscanf(fp1,"%s",word);
-              index = atoi(word);
+              index = atol(word);
               t[2][0][i] = point[0][index];
               t[2][1][i] = point[1][index];
               t[2][2][i] = point[2][index];
@@ -177,7 +174,8 @@ unsigned long long int load_points(unsigned int ptype, unsigned int bodyID, unsi
           }
       }
   } while (ch != EOF);
-  return nt;
+  *mint = min;
+  *maxt = max;
 }
 
 void normalize(unsigned long long int nt, iREAL *t[3][3], iREAL mint, iREAL maxt) 

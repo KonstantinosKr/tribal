@@ -1,4 +1,4 @@
-export void generate_triangles_and_velocities (uniform iREAL lo[3], uniform iREAL hi[3], uniform int nt, uniform iREAL * uniform t[3][3], uniform iREAL * uniform v[3], uniform unsigned int tid[], uniform unsigned int pid[])
+export void generate_triangles_and_velocities (uniform iREAL lo[3], uniform iREAL hi[3], uniform int64 nt, uniform iREAL * uniform t[3][3], uniform iREAL * uniform v[3], uniform unsigned int64 tid[], uniform unsigned int64 pid[])
 {
   struct RNGState state;
 
@@ -57,7 +57,7 @@ export void generate_triangles_and_velocities (uniform iREAL lo[3], uniform iREA
   }
 }
 
-export void generate_velocities (uniform iREAL lo[3], uniform iREAL hi[3], uniform int nt, uniform iREAL * uniform v[3])
+export void generate_velocities (uniform iREAL lo[3], uniform iREAL hi[3], uniform int64 nt, uniform iREAL * uniform v[3])
 {
     struct RNGState state;
 
@@ -75,7 +75,7 @@ export void generate_velocities (uniform iREAL lo[3], uniform iREAL hi[3], unifo
     }
 }
 
-export void scale_triangles (uniform iREAL lo[3], uniform iREAL hi[3], uniform int nt, uniform iREAL * uniform t[3][3])
+export void scale_triangles (uniform iREAL lo[3], uniform iREAL hi[3], uniform int64 nt, uniform iREAL * uniform t[3][3])
 {
   struct RNGState state;
 
@@ -104,7 +104,7 @@ export void scale_triangles (uniform iREAL lo[3], uniform iREAL hi[3], uniform i
 }
 
 export void integrate_triangles (uniform iREAL step, uniform iREAL lo[3], uniform iREAL hi[3],
-     uniform int nt, uniform iREAL * uniform t[3][3], uniform iREAL * uniform v[3])
+     uniform int64 nt, uniform iREAL * uniform t[3][3], uniform iREAL * uniform v[3])
 {
   foreach (i = 0 ... nt)
   {

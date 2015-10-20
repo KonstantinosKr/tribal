@@ -47,11 +47,11 @@ void migrate_triangles (unsigned long long int size, unsigned long long int *nt,
   }
   unsigned long long int num_export_unique=0;//number of unique ids to export
   unsigned long long int idx=0;
-  for (unsigned int i = 0; i < num_export; i++)//loop through export data/ids 
+  for (unsigned long long int i = 0; i < num_export; i++)//loop through export data/ids 
   {
     int proc = export_procs[i]; //proc is the export process for data id[i]
     int exists = 0; //set to 0 to mean doesn't exist
-    for(unsigned int j = 0; j < nproc;j++)
+    for(unsigned long long int j = 0; j < nproc;j++)
     {
       if(proc == export_unique_procs[j])//search list of unique export for duplicates 
       {
@@ -72,7 +72,7 @@ void migrate_triangles (unsigned long long int size, unsigned long long int *nt,
       { //sort binary-style
         if(export_unique_procs[idx-2] > export_unique_procs[idx-1])
         {//swap
-          unsigned int tmp = export_unique_procs[idx-2];
+          unsigned long long int tmp = export_unique_procs[idx-2];
           export_unique_procs[idx-2] = export_unique_procs[idx-1];
           export_unique_procs[idx-1] = tmp;
         }
@@ -84,7 +84,7 @@ void migrate_triangles (unsigned long long int size, unsigned long long int *nt,
     pivot[proc]++;
     
     //mark tid that will be exported thus deleted
-    tid[export_local_ids[i]] = UINT_MAX; 
+    tid[export_local_ids[i]] = ULLONG_MAX; 
   }
   
   //assign values to tmp export buffers
@@ -102,7 +102,7 @@ void migrate_triangles (unsigned long long int size, unsigned long long int *nt,
         vbuffer[(i*size*3)+(j*3)+(k)] = v[k][send_idx[i][j]];
       }
         pid_buffer[(i*size)+j] = pid[send_idx[i][j]];
-        pid[send_idx[i][j]] = UINT_MAX;
+        pid[send_idx[i][j]] = ULLONG_MAX;
     }
   }
 
@@ -114,12 +114,12 @@ void migrate_triangles (unsigned long long int size, unsigned long long int *nt,
   
     for(unsigned long long int j=pv;j>export_local_ids[i];j--)//from last towards first but only until gap of exported
     {
-      if(tid[j] != UINT_MAX)//if not marked as to be exported switch fill gaps
+      if(tid[j] != ULLONG_MAX)//if not marked as to be exported switch fill gaps
       {
         tid[export_local_ids[i]] = tid[j]; //send from 'last to first' the tids to 'first to last' in tid array
-        tid[j] = UINT_MAX; //mark moved tid
+        tid[j] = ULLONG_MAX; //mark moved tid
         pid[export_local_ids[i]] = pid[j];
-        pid[j] = UINT_MAX;
+        pid[j] = ULLONG_MAX;
         for(int k=0;k<3;k++)
         {
           t[0][k][export_local_ids[i]] = t[0][k][j];

@@ -7,7 +7,7 @@ void output_state(struct loba *lb, int myrank, unsigned long long int nt, iREAL 
     
     char iter[100];
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
-    char filename[100] = "/scratch/rfmw74/output"; //care or buffer overflow
+    char filename[100] = "output/output/mpi"; //care or buffer overflow
     strcat(filename, iter);
     //printf("%s\n", filename);
       
@@ -109,16 +109,16 @@ void postProcessing(int nranks, unsigned long long int size, unsigned long long 
     
     for(int ii=0; ii<timesteps; ii++)
     {
-      unsigned int nt = 0;
-      unsigned int n = 0;
-      unsigned int cellnt = 0;
-      unsigned int celldx = 0;
+      unsigned long long int nt = 0;
+      unsigned long long int n = 0;
+      unsigned long long int cellnt = 0;
+      unsigned long long int celldx = 0;
       
       //readin vtks from every rank
       for(int j=0; j<nranks; j++)
       {
         char ch, word[100];
-        char filename[100] = "scratch/rfmw74/output/output";
+        char filename[100] = "output/output/mergedmpi";
         char str[500];
         sprintf(str, "%i_%i.vtk", ii, j);
         strcat(filename, str);
@@ -139,7 +139,7 @@ void postProcessing(int nranks, unsigned long long int size, unsigned long long 
             ch = fscanf(fp,"%s",word);//float or double read
             
             //loop through points
-            for(unsigned int i=nt;i<nt+n;i++)
+            for(unsigned long long int i=nt;i<nt+n;i++)
             {
               ch = fscanf(fp, "%s", word);
               point[0][i] = atof(word);
@@ -154,10 +154,10 @@ void postProcessing(int nranks, unsigned long long int size, unsigned long long 
             if(strcmp(word, "CELLS")==0)
             {
               ch = fscanf(fp,"%s",word);
-              unsigned int celln = atoi(word);
+              unsigned long long int celln = atoi(word);
               ch = fscanf(fp,"%s",word);
               celldx = atoi(word) + celldx;
-              for(unsigned int i=cellnt;i<cellnt+celln;i++)
+              for(unsigned long long int i=cellnt;i<cellnt+celln;i++)
               {
                 ch = fscanf(fp,"%s",word);
                 if(strcmp(word, "3")==0)//triangle
@@ -188,9 +188,9 @@ void postProcessing(int nranks, unsigned long long int size, unsigned long long 
         
         // WRITE OUTPUT
         //
-        char iter[15];
+        char iter[100];
         sprintf(iter, "%i.vtk", ii);
-        char filename[500] = "scratch/rfmw74/output"; //care or buffer overflow
+        char filename[500] = "output/output"; //care or buffer overflow
         strcat(filename, iter);
         //printf("%s\n", filename);
         
@@ -198,13 +198,13 @@ void postProcessing(int nranks, unsigned long long int size, unsigned long long 
         
         fprintf(out,"# vtk DataFile Version 2.0\nOutput vtk file\nASCII\n\nDATASET UNSTRUCTURED_GRID\nPOINTS %i float\n", nt);
         
-        for(unsigned int i = 0; i < nt; i++)
+        for(unsigned long long int i = 0; i < nt; i++)
         {
           fprintf(out,"%.5f %.5f %.5f\n", point[0][i], point[1][i], point[2][i]);
         }
         
         fprintf(out,"\nCELLS %i %i\n", cellnt, celldx);
-        for(unsigned int i = 0; i < cellnt; i++)
+        for(unsigned long long int i = 0; i < cellnt; i++)
         {
           if(cells[0][i] == 3)
           {
@@ -217,7 +217,7 @@ void postProcessing(int nranks, unsigned long long int size, unsigned long long 
         }
         
         fprintf(out, "\nCELL_TYPES %i\n", cellnt);
-        for(unsigned int i = 0; i < cellnt; i++)
+        for(unsigned long long int i = 0; i < cellnt; i++)
         {
           if(cells[0][i] == 3)
           {

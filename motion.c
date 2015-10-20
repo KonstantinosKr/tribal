@@ -1,9 +1,9 @@
 #include "motion.h"
 
 
-void gen_velocities (iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * v[3])
+void gen_velocities (iREAL lo[3], iREAL hi[3], unsigned long long int nt, iREAL * v[3])
 {
-    for(unsigned int i = 0; i < nt; i++)
+    for(unsigned long long int i = 0; i < nt; i++)
     {
       v[0][i] = hi[0] * drand48()*2;
       v[1][i] = hi[1] * drand48()*2;
@@ -11,9 +11,9 @@ void gen_velocities (iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * v[3])
     }
 }
 
-void integrate (iREAL step, iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * t[3][3], iREAL * v[3])
+void integrate (iREAL step, iREAL lo[3], iREAL hi[3], unsigned long long int nt, iREAL * t[3][3], iREAL * v[3])
 {
-    for(unsigned int i = 0; i < nt; i++)
+    for(unsigned long long int i = 0; i < nt; i++)
     {
         t[0][0][i] += step*v[0][i];
         t[0][1][i] += step*v[1][i];

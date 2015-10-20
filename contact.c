@@ -4,12 +4,11 @@
 #include "algo.h"
 #include "math.h"
 
-using namespace ispc;
 //s1 and e1 mean start of section 1 and end of section 1, same for s2,e2 and nt size nts1, nts2
-void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsigned int e2,  unsigned long long int size, iREAL *t[3][3], iREAL *p[3], iREAL *q[3], iREAL *distance)
+void contact_detection (unsigned long long int s1, unsigned long long int e1, unsigned long long int s2, unsigned long long int e2,  unsigned long long int size, iREAL *t[3][3], iREAL *p[3], iREAL *q[3], iREAL *distance)
 {
-  unsigned int nts1 = e1-s1;
-  unsigned int nts2 = e2-s2;
+  unsigned long long int nts1 = e1-s1;
+  unsigned long long int nts2 = e2-s2;
 
   iREAL *d[3], *e[3], *f[3], *pp[3], *qq[3];
   
@@ -25,7 +24,7 @@ void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsig
   
   nts2 = 0; //use as counter
   //Set triangle 2 points D,E,F
-  for(unsigned int i=s2;i<s2;i++)
+  for(unsigned long long int i=s2;i<s2;i++)
   {
     d[0][nts2] = t[0][0][i];
     d[1][nts2] = t[0][1][i];
@@ -44,7 +43,7 @@ void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsig
   iREAL a[3], b[3], c[3];
   
   //Set triangle 1 points A,B,C
-  for(unsigned int i=s1;i<s1;i++)
+  for(unsigned long long int i=s1;i<s1;i++)
   { 
     a[0] = t[0][0][i];
     a[1] = t[0][1][i];
@@ -62,7 +61,7 @@ void contact_detection (unsigned int s1, unsigned int e1, unsigned int s2, unsig
    // ispc_bf (nt, a, b, c, d, e, f, pp, qq);//use tasks 
     
     nt = 0;//use as counter
-    for(unsigned int j=s2;j<e2;j++)
+    for(unsigned long long int j=s2;j<e2;j++)
     {
       iREAL dist = sqrt(pow((qq[0][nt]-pp[0][nt]),2)+pow((qq[1][nt]-pp[1][nt]),2)+pow((qq[2][nt]-pp[1][nt]),2));
       if(dist < 1E-3)

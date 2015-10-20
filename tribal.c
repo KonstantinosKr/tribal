@@ -13,8 +13,6 @@
 #include "motion.h"
 #include "migration.h"
 
-#define LARGENUM 10000000 //20 million
-
 int main (int argc, char **argv)
 {
   iREAL *t[3][3]; /* triangles */
@@ -27,8 +25,8 @@ int main (int argc, char **argv)
   iREAL lo[3] = {-255, -255, -255}; /* lower corner */
   iREAL hi[3] = {255, 255, 255}; /* upper corner */
   
-  unsigned int nParticles = 9;
-  unsigned long long int size = LARGENUM; /* memory buffer size */
+  unsigned long long int nParticles = 5;
+  unsigned long long int size = 4000000; /* memory buffer size */
   int nprocs;
   int myrank;
 
@@ -41,35 +39,35 @@ int main (int argc, char **argv)
   if (myrank == 0)
   {
     /* set nt */
-    if (argc > 1) nt = atoi (argv[1]);
-    else nt = 1000000;
+    if (argc > 1) nt = atol (argv[1]);
+    else nt = 0;
 
     for (int i = 0; i < 3; i ++)
     { 
-      ERRMEM (t[0][i] = (iREAL *) malloc (sizeof(iREAL[size])));
-      ERRMEM (t[1][i] = (iREAL *) malloc (sizeof(iREAL[size])));
-      ERRMEM (t[2][i] = (iREAL *) malloc (sizeof(iREAL[size])));
-      ERRMEM (v[i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      (t[0][i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (t[1][i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (t[2][i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (v[i] = (iREAL *) malloc (size*sizeof(iREAL)));
     
-      ERRMEM (p[i] = (iREAL *) malloc (sizeof(iREAL[size*size])));
-      ERRMEM (q[i] = (iREAL *) malloc (sizeof(iREAL[size*size])));
+      (p[i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (q[i] = (iREAL *) malloc (size*sizeof(iREAL)));
     }
-    ERRMEM (distance = (iREAL *) malloc (sizeof(iREAL[size*size])));
-    ERRMEM (tid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
-    ERRMEM (pid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
+    (distance = (iREAL *) malloc (size*sizeof(iREAL)));
+    (tid = (unsigned long long int *) malloc (size*sizeof(unsigned long long int)));
+    (pid = (unsigned long long int *) malloc (size*sizeof(unsigned long long int)));
     
-    for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX; 
+    for(unsigned long long int i=0;i<size;i++) tid[i] = ULLONG_MAX; 
     
     iREAL mint, maxt;
     
-  //Input Type
-  //0: Triangulated Mesh
-  //1: Triangle
-  //2: Sphere
-  //3: Square
-  //4: Hexahedron
+    //Input Type
+    //0: Triangulated Mesh
+    //1: Triangle
+    //2: Sphere
+    //3: Square
+    //4: Hexahedron
   
-    unsigned int *ptype = (unsigned int *) malloc (sizeof(unsigned int[nParticles]));
+    int ptype[nParticles];
     ptype[0] = 0;
     ptype[1] = 0;
     ptype[2] = 0;
@@ -81,13 +79,8 @@ int main (int argc, char **argv)
     ptype[8] = 0;
     //ptype[9] = 0;
     //ptype[10] = 0;
-    //ptype[11] = 0;
-    //ptype[12] = 0;
-    //ptype[13] = 0;
-    //ptype[14] = 0;
-    //ptype[15] = 0;
 
-    nt = load_enviroment(ptype, nParticles, t, tid, pid, &mint, &maxt);
+    load_enviroment(ptype, &nt, nParticles, t, tid, pid, &mint, &maxt);
     
     gen_velocities(lo, hi, nt, v);
   }
@@ -97,29 +90,30 @@ int main (int argc, char **argv)
     nt = 0;
 
     /* buffers */
-    if (argc > 1) size = atoi (argv[1])*4;
+    if (argc > 1) size = atol (argv[1])*4;
 
     for (int i = 0; i < 3; i ++)
     {
-      ERRMEM (t[0][i] = (iREAL *) malloc (sizeof(iREAL[size])));
-      ERRMEM (t[1][i] = (iREAL *) malloc (sizeof(iREAL[size])));
-      ERRMEM (t[2][i] = (iREAL *) malloc (sizeof(iREAL[size])));
-      ERRMEM (v[i] = (iREAL *) malloc (sizeof(iREAL[size])));
+      (t[0][i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (t[1][i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (t[2][i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (v[i] = (iREAL *) malloc (size*sizeof(iREAL)));
       
-      ERRMEM (p[i] = (iREAL *) malloc (sizeof(iREAL[size*size])));
-      ERRMEM (q[i] = (iREAL *) malloc (sizeof(iREAL[size*size*size])));
+      (p[i] = (iREAL *) malloc (size*sizeof(iREAL)));
+      (q[i] = (iREAL *) malloc (size*sizeof(iREAL)));
     }
-    ERRMEM (distance = (iREAL*) malloc (sizeof(iREAL[size*size])));
-    ERRMEM (tid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
-    ERRMEM (pid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
+    (distance = (iREAL*) malloc (size*sizeof(iREAL)));
+    (tid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
+    (pid = (unsigned long long int *) malloc (sizeof(unsigned long long int[size])));
       
-    for(unsigned long long int i=0;i<size;i++) tid[i] = UINT_MAX;
+    //for(unsigned long long int i=0;i<size;i++) tid[i] = ULLONG_MAX;
   }
   
   int num_import, num_export;
   int *import_procs, *export_procs;
   ZOLTAN_ID_PTR import_global_ids, import_local_ids, export_global_ids, export_local_ids;
   
+
   /* create load balancer */
   struct loba *lb = loba_create (ZOLTAN_RCB);
 
@@ -145,7 +139,7 @@ int main (int argc, char **argv)
                         export_global_ids, export_local_ids);
   if(myrank == 0) 
    printf("passed migration\n"); 
-    loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
+   // loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid);
     
   if(myrank == 0) 
    printf("passed data exchange\n"); 
