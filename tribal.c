@@ -199,6 +199,104 @@ int main (int argc, char **argv)
     dt2 = dt2 + tTimer2[i];
     dt3 = dt3 + tTimer3[i];
   }  
+  
+  if(myrank != 0)
+  {
+    MPI_Send(&subtotal, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&bal, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&mig, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&de, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&dt1, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&dt2, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&dt3, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+  }
+  else if (myrank == 0)
+  {
+    iREAL *rvsubtotal = (iREAL *) malloc(nprocs*sizeof(iREAL));
+    iREAL *rvbal = (iREAL *) malloc(nprocs*sizeof(iREAL));
+    iREAL *rvmig = (iREAL *) malloc(nprocs*sizeof(iREAL));
+    iREAL *rvde = (iREAL *) malloc(nprocs*sizeof(iREAL));
+    iREAL *rvdt1 = (iREAL *) malloc(nprocs*sizeof(iREAL));
+    iREAL *rvdt2 = (iREAL *) malloc(nprocs*sizeof(iREAL));
+    iREAL *rvdt3 = (iREAL *) malloc(nprocs*sizeof(iREAL));
+    
+
+    iREAL minsubtotal = DBL_MAX;
+    iREAL minbal = DBL_MAX;
+    iREAL minmig = DBL_MAX;
+    iREAL minde = DBL_MAX;
+    iREAL mindt1 = DBL_MAX;
+    iREAL mindt2 = DBL_MAX;
+    iREAL mindt3 = DBL_MAX;
+    
+    iREAL avgsubtotal = 0;
+    iREAL avgbal = 0;
+    iREAL avgmig = 0;
+    iREAL avgde = 0;
+    iREAL avgdt1 = 0;
+    iREAL avgdt2 = 0;
+    iREAL avgdt3 = 0;
+    
+    iREAL maxsubtotal = DBL_MIN;
+    iREAL maxbal = DBL_MIN;
+    iREAL maxmig = DBL_MIN;
+    iREAL maxde = DBL_MIN;
+    iREAL maxdt1 = DBL_MIN;
+    iREAL maxdt2 = DBL_MIN;
+    iREAL maxdt3 = DBL_MIN;
+
+    for(int i = 1; i < nprocs;i++)
+    {
+      MPI_Recv(&rvsubtotal[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvbal[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvmig[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvde[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvdt1[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvdt2[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvdt3[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+    }
+
+    for(int i = 0; i < nprocs;i++)
+    {
+      if(rvsubtotal[i] < minsubtotal) minsubtotal = rvsubtotal[i-1];
+      if(rvsubtotal[i] > maxsubtotal) maxsubtotal = rvsubtotal[i-1];
+      avgsubtotal += rvsubtotal[i];
+
+      if(rvbal[i] < minbal) minbal = rvbal[i];
+      if(rvbal[i] > maxbal) maxbal = rvbal[i];
+      avgbal += rvbal[i];
+
+      if(rvmig[i] < minmig) minmig = rvmig[i];
+      if(rvmig[i] > maxmig) maxmig = rvmig[i];
+      avgmig += rvmig[i];
+      
+      if(rvde[i] < minde) minde = rvde[i];
+      if(rvde[i] > maxde) maxde = rvde[i];
+      avgde += rvde[i];
+
+      if(rvdt1[i] < mindt1) mindt1 = rvdt1[i];
+      if(rvdt1[i] > maxdt1) maxdt1 = rvdt1[i];
+      avgdt1 += rvdt1[i];
+      
+      if(rvdt2[i] < mindt2) mindt2 = rvdt2[i];
+      if(rvdt2[i] > maxdt2) maxdt2 = rvdt2[i];
+      avgdt2 += rvdt2[i];
+
+      if(rvdt3[i] < mindt3) mindt3 = rvdt3[i];
+      if(rvdt3[i] > maxdt3) maxdt3 = rvdt3[i];
+      avgdt3 += rvdt3[i];
+    }
+
+    avgsubtotal = avgsubtotal/nprocs;
+    avgbal = avgbal/nprocs;
+    avgmig = avgmig/nprocs;
+    avgde = avgde/nprocs;
+    avgdt1 = avgdt1/nprocs;
+    avgdt2 = avgdt2/nprocs;
+    avgdt3 = avgdt3/nprocs; 
+   
+    printf("TOTALmin: %f, TOTALmax: %f, TOTALavg: %f\nZ-BALmin: %f, Z-BALmax: %f, Z-BALavg: %f\nMIGRATIONmin: %f, MIGRATIONmax: %f, MIGRATIONavg: %f\nDTXmin: %f, DTXmax: %f, DTXavg: %f\nDT1min: %f, DT1max: %f, DT1avg: %f\nDT2min: %f, DT2max: %f, DT2avg: %f\nDT3min: %f, DT3max: %f, DT3avg: %f\n", minsubtotal, maxsubtotal, avgsubtotal, minbal, maxbal, avgbal, minmig, maxmig, avgmig, minde, maxde, avgde, mindt1, maxdt1, avgdt1, mindt2, maxdt2, avgdt2, mindt3, maxdt3, avgdt3); 
+  }
 
   printf("RANK[%i]: TOTAL:%f Z-BALANCE:%f, MIGRATION:%f, DATAXCHANGE:%f, DT1:%f, DT2:%f, DT3:%f, INTEGRATION:%f\n", myrank, subtotal, bal, mig, de, dt1, dt2, dt3, in);
   printf("RANK[%i]: FIRST MIGRATION:%f\n", myrank, tmigration[0].total);
