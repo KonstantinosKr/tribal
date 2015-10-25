@@ -1,10 +1,10 @@
 #include "input.h" 
 
-void load_enviroment(int ptype[], unsigned long long int *nt, unsigned long long int nParticles, iREAL *t[3][3], unsigned long long int tid[], unsigned long long int pid[], iREAL *mint, iREAL *maxt)
+void load_enviroment(int ptype[], unsigned int *nt, unsigned int nParticles, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
 {
-  unsigned long long int n = 0;
+  unsigned int n = 0;
   *nt = 0;
-  for(unsigned long long int i = 0; i < nParticles; i++)
+  for(unsigned int i = 0; i < nParticles; i++)
   {
     load_points(ptype[i], &n, i, *nt, t, tid, pid, mint, maxt);
     *nt = n + *nt;
@@ -36,7 +36,7 @@ void init_enviroment()
 }
 */
 
-void load_points(int ptype, unsigned long long int *nt, unsigned long long int bodyID, unsigned long long int startIDX, iREAL *t[3][3], unsigned long long int tid[], unsigned long long int pid[], iREAL *mint, iREAL *maxt)
+void load_points(int ptype, unsigned int *nt, unsigned int bodyID, unsigned int startIDX, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
 {
   //////////VTK format////////////
 
@@ -86,7 +86,7 @@ void load_points(int ptype, unsigned long long int *nt, unsigned long long int b
       {
           printf("found!\n");
           ch = fscanf(fp1,"%s",word);
-          unsigned long long int n = atol(word);
+          unsigned int n = atol(word);
           //get points
           ch = fscanf(fp1,"%s",word);
           //printf("will read: %llu\n",n); 
@@ -94,7 +94,7 @@ void load_points(int ptype, unsigned long long int *nt, unsigned long long int b
           point[1] = (iREAL *)malloc (n*sizeof(iREAL));
           point[2] = (iREAL *)malloc (n*sizeof(iREAL));
           
-          for(unsigned long long int i=0;i<n;i++)
+          for(unsigned int i=0;i<n;i++)
           {
               fscanf(fp1, "%lf", &point[0][i]);
               fscanf(fp1, "%lf", &point[1][i]);
@@ -137,16 +137,16 @@ void load_points(int ptype, unsigned long long int *nt, unsigned long long int b
       if(strcmp(word, "CELLS")==0)
       { 
           ch = fscanf(fp1,"%s",word);
-          unsigned long long int n = atol(word);
+          unsigned int n = atol(word);
           *nt = n;
           ch = fscanf(fp1,"%s",word);
           printf(":::%u::\n",n);
-          for(unsigned long long int i=startIDX;i<startIDX+n;i++)
+          for(unsigned int i=startIDX;i<startIDX+n;i++)
           {
               ch = fscanf(fp1,"%s",word);
               ch = fscanf(fp1,"%s",word);
               
-              unsigned long long int index = atol(word);
+              unsigned int index = atol(word);
               t[0][0][i] = point[0][index];
               t[0][1][i] = point[1][index];
               t[0][2][i] = point[2][index];
@@ -178,12 +178,12 @@ void load_points(int ptype, unsigned long long int *nt, unsigned long long int b
   *maxt = max;
 }
 
-void normalize(unsigned long long int nt, iREAL *t[3][3], iREAL mint, iREAL maxt) 
+void normalize(unsigned int nt, iREAL *t[3][3], iREAL mint, iREAL maxt) 
 {  
   //range -255 to 255
   iREAL inv_range = 510.0/(maxt-mint);
 
-  for(unsigned long long int i=0; i < nt; i++)
+  for(unsigned int i=0; i < nt; i++)
   {
     for(int j=0; j < 3; j++)
     {

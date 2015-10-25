@@ -6,4 +6,4 @@
 #include <float.h>
 #include <zoltan.h>
 
-void migrate_triangles (unsigned long long int size, unsigned long long int *nt, iREAL *t[3][3], iREAL *v[3], unsigned long long int *tid, unsigned long long int *pid, int num_import, int *import_procs, int num_export, int *export_procs, ZOLTAN_ID_PTR import_global_ids, ZOLTAN_ID_PTR import_local_ids, ZOLTAN_ID_PTR export_global_ids, ZOLTAN_ID_PTR export_local_ids);
+void migrate_triangles (unsigned int size, unsigned int *nt, iREAL *t[3][3], iREAL *v[3], unsigned int *tid, unsigned int *pid, int num_import, int *import_procs, int num_export, int *export_procs, ZOLTAN_ID_PTR import_global_ids, ZOLTAN_ID_PTR import_local_ids, ZOLTAN_ID_PTR export_global_ids, ZOLTAN_ID_PTR export_local_ids);

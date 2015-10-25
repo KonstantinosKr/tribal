@@ -8,15 +8,15 @@ else
 endif
 
 ifeq ($(DEBUG),yes)
-  CFLAGS=-Iobjs/ -g -m64 $(REAL) -DDEBUG $(ZOLTANINC)
-  ISPC=ispc -g --arch=x86-64 $(REAL) -DDEBUG
+  CFLAGS=-Iobjs/ -g -O0 -m64 $(REAL) -DDEBUG $(ZOLTANINC)
+  ISPC=ispc -g -O0 --arch=x86-64 $(REAL) -DDEBUG
 else
-  CFLAGS=-Iobjs/ -O2 -m64 $(REAL) $(ZOLTANINC)
-  ISPC=ispc -O2 --arch=x86-64 --woff $(REAL) 
+  CFLAGS=-Iobjs/ -O0 -m64 $(REAL) $(ZOLTANINC)
+  ISPC=ispc -O0 --arch=x86-64 --woff $(REAL) 
 endif
 
-CC=gcc
-CXX=g++
+CC=icc
+CXX=icpc
 
 ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=_ispc.o))
 ISPC_HEADERS=$(addprefix objs/, $(ISPC_SRC:.ispc=_ispc.h))
@@ -55,4 +55,4 @@ objs/%.o: %.cpp $(ISPC_HEADERS)
 	$(CXX) $(CFLAGS) $< -c -o $@
 
 objs/%.o: %.c $(ISPC_HEADERS)
-	$(MPICC) $(CFLAGS) $< -c -o $@
+	$(MPICXX) $(CFLAGS) $< -c -o $@

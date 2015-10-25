@@ -39,6 +39,8 @@ static inline void timerstart (TIMING *t)
 
 static inline double timerend (TIMING *t)
 {
+  t->sec = 0.0;
+  t->total = 0.0;
   struct timeval newtime;
   gettimeofday (&newtime, NULL);
   t->sec = (((double)newtime.tv_sec - (double)t->time.tv_sec) * 1000000. +

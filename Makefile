@@ -9,7 +9,7 @@ ISPC_TARGETS=avx2
 
 # MPI
 MPICC=mpicc
-MPICXX=mpic++
+MPICXX=mpicc
 
 # Zoltan paths
 ZOLTANINC = -I/usr/local/include
@@ -22,7 +22,7 @@ EXE=tribal
 REAL=double
 
 # Debug version
-DEBUG=yes
+DEBUG=no
 
 # Do the rest
 include common.mk
