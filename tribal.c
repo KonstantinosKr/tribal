@@ -26,7 +26,7 @@ int main (int argc, char **argv)
   iREAL lo[3] = {-255, -255, -255}; /* lower corner */
   iREAL hi[3] = {255, 255, 255}; /* upper corner */
   
-  unsigned int nParticles = 12;
+  unsigned int nParticles = 16;
   unsigned int size = 20000000; /* memory buffer size */
   int nprocs, myrank;
 
@@ -247,19 +247,27 @@ int main (int argc, char **argv)
 
     for(int i = 1; i < nprocs;i++)
     {
-      MPI_Recv(&rvsubtotal[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&rvbal[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&rvmig[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&rvde[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&rvdt1[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&rvdt2[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(&rvdt3[i-1], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+      MPI_Recv(&rvsubtotal[i], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvbal[i], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvmig[i], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvde[i], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvdt1[i], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvdt2[i], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&rvdt3[i], 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
     }
+    
+      rvsubtotal[0] = subtotal;
+      rvbal[0] = bal;
+      rvmig[0] = mig;
+      rvde[0] = de;
+      rvdt1[0] = dt1;
+      rvdt2[0] = dt2;
+      rvdt3[0] = dt3;
 
     for(int i = 0; i < nprocs;i++)
     {
-      if(rvsubtotal[i] < minsubtotal) minsubtotal = rvsubtotal[i-1];
-      if(rvsubtotal[i] > maxsubtotal) maxsubtotal = rvsubtotal[i-1];
+      if(rvsubtotal[i] < minsubtotal) minsubtotal = rvsubtotal[i];
+      if(rvsubtotal[i] > maxsubtotal) maxsubtotal = rvsubtotal[i];
       avgsubtotal += rvsubtotal[i];
 
       if(rvbal[i] < minbal) minbal = rvbal[i];
@@ -298,8 +306,8 @@ int main (int argc, char **argv)
     printf("TOTALmin: %f, TOTALmax: %f, TOTALavg: %f\nZ-BALmin: %f, Z-BALmax: %f, Z-BALavg: %f\nMIGRATIONmin: %f, MIGRATIONmax: %f, MIGRATIONavg: %f\nDTXmin: %f, DTXmax: %f, DTXavg: %f\nDT1min: %f, DT1max: %f, DT1avg: %f\nDT2min: %f, DT2max: %f, DT2avg: %f\nDT3min: %f, DT3max: %f, DT3avg: %f\n", minsubtotal, maxsubtotal, avgsubtotal, minbal, maxbal, avgbal, minmig, maxmig, avgmig, minde, maxde, avgde, mindt1, maxdt1, avgdt1, mindt2, maxdt2, avgdt2, mindt3, maxdt3, avgdt3); 
   }
 
-  printf("RANK[%i]: TOTAL:%f Z-BALANCE:%f, MIGRATION:%f, DATAXCHANGE:%f, DT1:%f, DT2:%f, DT3:%f, INTEGRATION:%f\n", myrank, subtotal, bal, mig, de, dt1, dt2, dt3, in);
-  printf("RANK[%i]: FIRST MIGRATION:%f\n", myrank, tmigration[0].total);
+  //printf("RANK[%i]: TOTAL:%f Z-BALANCE:%f, MIGRATION:%f, DATAXCHANGE:%f, DT1:%f, DT2:%f, DT3:%f, INTEGRATION:%f\n", myrank, subtotal, bal, mig, de, dt1, dt2, dt3, in);
+  //printf("RANK[%i]: FIRST MIGRATION:%f\n", myrank, tmigration[0].total);
   MPI_Barrier(MPI_COMM_WORLD);
   if(myrank == 0)//have to make sure all ranks finished
   {
