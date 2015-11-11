@@ -38,7 +38,6 @@ int main (int argc, char **argv)
    
   if (myrank == 0)
   {
-    size = 20000000;
     for (int i = 0; i < 3; i ++)
     { 
       t[0][i] = (iREAL *) malloc (size*sizeof(iREAL));
@@ -78,7 +77,6 @@ int main (int argc, char **argv)
   }
   else
   {
-    size = 20000000;
     for (int i = 0; i < 3; i ++)
     {
       t[0][i] = (iREAL *) malloc (size*sizeof(iREAL));

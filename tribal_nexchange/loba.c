@@ -334,7 +334,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned int size, unsigne
 {
     TIMING t1, t2, t3;
  
-    printf("Hello");
     timerstart(&t1);
     int nproc=0;
     int nNeighbors=0;
@@ -366,7 +365,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned int size, unsigne
       pvtidx[i] = sum;
     }
 
-    
     for(int i=0; i<nNeighbors; i++)
     {
       int proc = neighborhood[i];
@@ -377,7 +375,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned int size, unsigne
         MPI_Irecv(&t[1][0][pvtidx[i]], rcvpivot[i]*3, MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*6)+2]);
         MPI_Irecv(&t[2][0][pvtidx[i]], rcvpivot[i]*3, MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*6)+3]);
         
-        MPI_Irecv(&v[pvtidx[i]], rcvpivot[i], MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*6)+4]);
+        MPI_Irecv(&v[0][pvtidx[i]], rcvpivot[i]*3, MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*6)+4]);
         MPI_Irecv(&pid[pvtidx[i]], rcvpivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myrvRequest[(i*6)+5]);
       }
     }
@@ -392,7 +390,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned int size, unsigne
         MPI_Isend(&t[1][0][0], pivot[i]*3, MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myRequest[(i*6)+2]);
         MPI_Isend(&t[2][0][0], pivot[i]*3, MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myRequest[(i*6)+3]);
         
-        MPI_Isend(&v[0], pivot[i], MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myRequest[(i*6)+4]);
+      	MPI_Isend(&v[0][0], pivot[i]*3, MPI_DOUBLE, proc, 1, MPI_COMM_WORLD, &myRequest[(i*6)+4]);
         MPI_Isend(&pid[0], pivot[i], MPI_INT, proc, 1, MPI_COMM_WORLD, &myRequest[(i*6)+5]);
       }
     }
@@ -414,7 +412,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned int size, unsigne
         MPI_Wait(&myrvRequest[(i*6)+1], MPI_STATUS_IGNORE);
         MPI_Wait(&myrvRequest[(i*6)+2], MPI_STATUS_IGNORE);
         MPI_Wait(&myrvRequest[(i*6)+3], MPI_STATUS_IGNORE);
-        MPI_Wait(&myrvRequest[(i*6)+4], MPI_STATUS_IGNORE);
+     	MPI_Wait(&myrvRequest[(i*6)+4], MPI_STATUS_IGNORE);
         MPI_Wait(&myrvRequest[(i*6)+5], MPI_STATUS_IGNORE);
       }
         
@@ -424,7 +422,7 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned int size, unsigne
         MPI_Wait(&myRequest[(i*6)+1], MPI_STATUS_IGNORE);
         MPI_Wait(&myRequest[(i*6)+2], MPI_STATUS_IGNORE);
         MPI_Wait(&myRequest[(i*6)+3], MPI_STATUS_IGNORE);
-        MPI_Wait(&myRequest[(i*6)+4], MPI_STATUS_IGNORE);
+    	MPI_Wait(&myRequest[(i*6)+4], MPI_STATUS_IGNORE);
         MPI_Wait(&myRequest[(i*6)+5], MPI_STATUS_IGNORE);
       }
     }
