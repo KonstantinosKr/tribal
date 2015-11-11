@@ -26,7 +26,6 @@ int main (int argc, char **argv)
   iREAL lo[3] = {-255, -255, -255}; /* lower corner */
   iREAL hi[3] = {255, 255, 255}; /* upper corner */
   
-  unsigned int nParticles = 5;
   unsigned int size = 20000000; /* memory buffer size */
   int nprocs, myrank;
 
@@ -56,24 +55,9 @@ int main (int argc, char **argv)
     
     iREAL mint, maxt;
     
-    //Input Type
-    //0: Triangulated Mesh
-    //1: Triangle
-    //2: Sphere
-    //3: Square
-    //4: Hexahedron
-  
-    int ptype[nParticles];
-    ptype[0] = 0;
-    ptype[1] = 0;
-    ptype[2] = 0;
-    ptype[3] = 0;
-    ptype[4] = 0;
-    
-    load_enviroment(ptype, &nt, nParticles, t, tid, pid, &mint, &maxt);
-    
-    iREAL velo[3] = {50, 50, 50};
-    gen_velocities(lo, velo, nt, v);
+    unsigned int nparticles;
+    init_enviroment(&nt, &nparticles, t, v, tid, pid, &mint, &maxt);  
+    printf("NT:%i\n", nt);
   }
   else
   {
@@ -118,7 +102,8 @@ int main (int argc, char **argv)
   timer3 = 0.0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 0.1; time+=step)
+  //for(time = 0; time < 0.1; time+=step)
+  for(time = 0; time < 1; time++)
   {
     if(myrank == 0){printf("TIMESTEP: %i\n", timesteps);}
     
@@ -130,7 +115,6 @@ int main (int argc, char **argv)
                   &export_global_ids, &export_local_ids);
     timerend (&tbalance[timesteps]);
    
-  MPI_Barrier(MPI_COMM_WORLD);
     printf("RANK[%i]: load balance:%f\n", myrank, tbalance[timesteps].total);
     
     timerstart(&tmigration[timesteps]);
@@ -163,7 +147,7 @@ int main (int argc, char **argv)
     
     printf("RANK[%i]: integration:%f\n", myrank, tintegration[timesteps].total);
 
-    //output_state(lb, myrank, nt, t, v, timesteps);
+    output_state(lb, myrank, nt, t, v, timesteps);
     
     timesteps++;
   }
@@ -300,8 +284,8 @@ int main (int argc, char **argv)
   if(myrank == 0)//have to make sure all ranks finished
   {
     printf("\nComputation Finished.\n");
-    //postProcessing(nprocs, size, timesteps);
-    //printf("Post-Processing Finished.\n");
+    postProcessing(nprocs, size, timesteps);
+    printf("Post-Processing Finished.\n");
   }
 
   /* finalise */

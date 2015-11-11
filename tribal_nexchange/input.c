@@ -1,24 +1,7 @@
 #include "input.h" 
 
-void load_enviroment(int ptype[], unsigned int *nt, unsigned int nParticles, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
-{
-  unsigned int n = 0;
-  *nt = 0;
-  for(unsigned int i = 0; i < nParticles; i++)
-  {
-    load_points(ptype[i], &n, i, *nt, t, tid, pid, mint, maxt);
-    *nt = n + *nt;
-    n = 0;
-  }
-}
 
 /*
-void save_enviroment()
-{
-
-
-}
-
 void resize_enviroment()
 {
 
@@ -28,13 +11,47 @@ void translate_enviroment()
 {
   
 }
-
-void init_enviroment()
-{
-
-
-}
 */
+
+void init_enviroment(unsigned int *nt, unsigned int *nParticles, iREAL *t[3][3], iREAL *v[3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
+{
+  //Input Type
+  //0: Triangulated Mesh
+  //1: Particle
+  //2: Triangle
+  //3: Sphere
+  //4: Square
+  //5: Hexahedron
+
+  *nParticles = 200;
+  int ptype[*nParticles];
+  for(int i = 0; i < *nParticles; i++)
+  {
+    ptype[i] = 1;
+  }
+  
+  load_enviroment(ptype, nt, *nParticles, t, tid, pid, mint, maxt);
+  printf("ntinit:%i\n",*nt); 
+  iREAL velo[3] = {50, 50, 50};
+  iREAL lo[3] = {-255, -255, -255}; /* lower corner */
+  iREAL hi[3] = {255, 255, 255}; /* upper corner */
+  
+  gen_velocities(lo, velo, *nt, v);
+}
+
+void load_enviroment(int ptype[], unsigned int *nt, unsigned int nParticles, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
+{
+  unsigned int n = 0;
+  *nt = 0;
+  for(unsigned int i = 0; i < nParticles; i++)
+  {
+    load_points(ptype[i], &n, i, *nt, t, tid, pid, mint, maxt);
+    printf("n:%i\n", n);
+    *nt = n + *nt;
+    n = 0;
+  }
+  printf("loadnt:%i\n", *nt);
+}
 
 void load_points(int ptype, unsigned int *nt, unsigned int bodyID, unsigned int startIDX, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
 {
@@ -42,17 +59,18 @@ void load_points(int ptype, unsigned int *nt, unsigned int bodyID, unsigned int 
 
   //Input Type
   //0: Triangulated Mesh
-  //1: Triangle
-  //2: Sphere
-  //3: Square
-  //4: Hexahedron
+  //1: Particle
+  //2: Triangle
+  //3: Sphere
+  //4: Square
+  //5: Hexahedron
   
   iREAL min = DBL_MAX;
   iREAL max = DBL_MIN;
   FILE *fp1;
   if(ptype == 0)
   {
-    char filename[100] = "input/mesh";
+    char filename[100] = "input/mesh/mesh";
     char strtmp[100];
     sprintf(strtmp, "%i.vtk", bodyID);
     strcat(filename, strtmp);
@@ -60,14 +78,22 @@ void load_points(int ptype, unsigned int *nt, unsigned int bodyID, unsigned int 
     printf("%s\n", filename);
   } else if(ptype == 1)
   {
-    fp1 = fopen("input/shapes/triangle.vtk", "r");
+    char filename[100] = "input/particles/par_";
+    char strtmp[100];
+    sprintf(strtmp, "%i.vtk", bodyID);
+    strcat(filename, strtmp);
+    fp1 = fopen(filename, "r+");
+    printf("%s\n", filename);
   } else if(ptype == 2)
   {
-    fp1 = fopen("input/shapes/sphere.vtk", "r");
+    fp1 = fopen("input/shapes/triangle.vtk", "r");
   } else if(ptype == 3)
   {
-    fp1 = fopen("input/shapes/square.vtk", "r");
+    fp1 = fopen("input/shapes/sphere.vtk", "r");
   } else if(ptype == 4)
+  {
+    fp1 = fopen("input/shapes/square.vtk", "r");
+  } else if(ptype == 5)
   {
     fp1 = fopen("input/shapes/hexahedron.vtk", "r");
   }
@@ -134,7 +160,7 @@ void load_points(int ptype, unsigned int *nt, unsigned int bodyID, unsigned int 
               }
           }
       }
-      if(strcmp(word, "CELLS")==0)
+      if(strcmp(word, "CELLS")==0 || strcmp(word, "POLYGONS") == 0)
       { 
           ch = fscanf(fp1,"%s",word);
           unsigned int n = atol(word);
