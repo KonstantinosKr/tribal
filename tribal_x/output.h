@@ -8,5 +8,4 @@
 #include <zoltan.h>
 
 void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], iREAL *v[3], unsigned int timesteps);
-
 void postProcessing(int nranks, unsigned int size, unsigned int timesteps);

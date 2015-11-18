@@ -3,7 +3,7 @@
 
 void gen_velocities (iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * v[3])
 {
-    for(unsigned int i = 0; i < nt; i++)
+    for(int i = 0; i < nt; i++)
     {
       v[0][i] = hi[0] * drand48();
       v[1][i] = hi[1] * drand48();
@@ -13,7 +13,7 @@ void gen_velocities (iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * v[3])
 
 void integrate (iREAL step, iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * t[3][3], iREAL * v[3])
 {
-    for(unsigned int i = 0; i < nt; i++)
+    for(int i = 0; i < nt; i++)
     {
         t[0][0][i] += step*v[0][i];
         t[0][1][i] += step*v[1][i];
@@ -46,4 +46,9 @@ void integrate (iREAL step, iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * t
         if (t[2][1][i] > hi[1]) v[1][i] *= -1;
         if (t[2][2][i] > hi[2]) v[2][i] *= -1;
     }
+}
+
+//id: body/particle id,  
+void translate(unsigned int id)
+{
 }

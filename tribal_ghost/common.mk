@@ -8,10 +8,10 @@ else
 endif
 
 ifeq ($(DEBUG),yes)
-  CFLAGS=-Iobjs/ -g -O0 -m64 $(REAL) -DDEBUG $(ZOLTANINC)
+  CFLAGS=-Iobjs/ -g -std=c11 --O0 -m64 $(REAL) -DDEBUG $(ZOLTANINC)
   ISPC=ispc -g -O0 --arch=x86-64 $(REAL) -DDEBUG
 else
-  CFLAGS=-Iobjs/ -O2 -m64 $(REAL) $(ZOLTANINC)
+  CFLAGS=-Iobjs/ -std=c11 -O2 -m64 $(REAL) $(ZOLTANINC)
   ISPC=ispc -O2 --arch=x86-64 --woff $(REAL) 
 endif
 
