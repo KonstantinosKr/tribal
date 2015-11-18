@@ -4,9 +4,9 @@
 #include <string.h>
 #include <float.h>
 #include <iostream>
-#define nranks 32
+#define nranks 2
 #define timesteps 100
-#define size 1000000
+#define size 25000000
 
 int main()
 {
@@ -52,6 +52,7 @@ int main()
           {
             ch = fscanf(fp,"%s",word);//n points
             n = atoi(word);//n points saved
+            nt = n; 
             ch = fscanf(fp,"%s",word);//float or double read
             
             //loop through points
@@ -146,6 +147,16 @@ int main()
     }
     fclose(out);
   }
+
+  free(point[0]);
+  free(point[1]);
+  free(point[2]);
+
+  free(cells[0]);
+  free(cells[1]);
+  free(cells[2]);
+  free(cells[3]);
+  free(cells[4]);
 
   return 0;
 }

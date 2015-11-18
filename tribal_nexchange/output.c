@@ -9,7 +9,7 @@ void output_state(struct loba *lb, int myrank, unsigned int nt, iREAL *t[3][3], 
     sprintf(iter, "%u_%i.vtk", timesteps, myrank);
     char filename[100] = "output/mpi/output"; //care or buffer overflow
     strcat(filename, iter);
-    //printf("%s\n", filename);
+    printf("%s\n", filename);
       
     FILE *fp = fopen(filename, "w+");
     if( fp == NULL )
@@ -99,100 +99,101 @@ void postProcessing(int nranks, unsigned int size, unsigned int timesteps)
     
     for(int i=0; i<3; i++)
     {
-      point[i] = (double*) malloc(sizeof(double[size]));
+        point[i] = (double*) malloc(sizeof(double[size]));
     }
     
     for(int i=0; i<5; i++)
     {
-      cells[i] = (int*) malloc(sizeof(int[size]));
+        cells[i] = (int*) malloc(sizeof(int[size]));
     }
     
     for(int ii=0; ii<timesteps; ii++)
     {
-      unsigned int nt = 0;
-      unsigned int n = 0;
-      unsigned int cellnt = 0;
-      unsigned int celldx = 0;
-      
-      //readin vtks from every rank
-      for(int j=0; j<nranks; j++)
-      {
-        char ch, word[100];
-        char filename[100] = "output/mpi/output";
-        char str[500];
-        sprintf(str, "%i_%i.vtk", ii, j);
-        strcat(filename, str);
+        unsigned int nt = 0;
+        unsigned int n = 0;
+        unsigned int cellnt = 0;
+        unsigned int celldx = 0;
         
-        FILE *fp = fopen(filename, "r");
-        if( fp == NULL )
+        //readin vtks from every rank
+        for(int j=0; j<nranks; j++)
         {
-          perror("Error while opening the file.\n");
-          exit(EXIT_FAILURE);
-        }
-          
-        do{
-          ch = fscanf(fp,"%s",word);
-          if(strcmp(word, "POINTS")==0)
-          {
-            ch = fscanf(fp,"%s",word);//n points
-            n = atoi(word);//n points saved
-            ch = fscanf(fp,"%s",word);//float or double read
+            char ch, word[100];
+            char filename[100] = "output/mpi/output";
+            char str[100];
+            sprintf(str, "%i_%i.vtk", ii, j);
+            strcat(filename, str);
             
-            //loop through points
-            for(unsigned int i=nt;i<nt+n;i++)
+            FILE *fp = fopen(filename, "r");
+            if( fp == NULL )
             {
-              ch = fscanf(fp, "%s", word);
-              point[0][i] = atof(word);
-              ch = fscanf(fp, "%s", word);
-              point[1][i] = atof(word);
-              ch = fscanf(fp, "%s", word);
-              point[2][i] = atof(word);
-              //printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
+                perror("Error while opening the file.\n");
+                exit(EXIT_FAILURE);
             }
-          }
-              
-            if(strcmp(word, "CELLS")==0)
-            {
-              ch = fscanf(fp,"%s",word);
-              unsigned int celln = atoi(word);
-              ch = fscanf(fp,"%s",word);
-              celldx = atoi(word) + celldx;
-              for(unsigned int i=cellnt;i<cellnt+celln;i++)
-              {
+            
+            do  {
                 ch = fscanf(fp,"%s",word);
-                if(strcmp(word, "3")==0)//triangle
+                if(strcmp(word, "POINTS")==0)
                 {
-                  cells[0][i] = 3;
-                  ch = fscanf(fp, "%s", word);
-                  cells[1][i] = atof(word) + nt;
-                  ch = fscanf(fp, "%s", word);
-                  cells[2][i] = atof(word) + nt;
-                  ch = fscanf(fp, "%s", word);
-                  cells[3][i] = atof(word) + nt;
+                    ch = fscanf(fp,"%s",word);//n points
+                    n = atoi(word);//n points saved
+                    nt = n;
+                    ch = fscanf(fp,"%s",word);//float or double read
+                    
+                    //loop through points
+                    for(unsigned int i=nt;i<nt+n;i++)
+                    {
+                        ch = fscanf(fp, "%s", word);
+                        point[0][i] = atof(word);
+                        ch = fscanf(fp, "%s", word);
+                        point[1][i] = atof(word);
+                        ch = fscanf(fp, "%s", word);
+                        point[2][i] = atof(word);
+                        //printf("POINT[0] = %f | POINT[1] = %f | POINT[2] = %f\n", point[0][i], point[1][i], point[2][i]);
+                    }
                 }
-                else if(strcmp(word, "2")==0)//line
+                
+                if(strcmp(word, "CELLS")==0)
                 {
-                  cells[0][i] = 2;
-                  ch = fscanf(fp, "%s", word);
-                  cells[1][i] = atof(word) + nt;
-                  ch = fscanf(fp, "%s", word);
-                  cells[2][i] = atof(word) + nt;
+                    ch = fscanf(fp,"%s",word);
+                    unsigned int celln = atoi(word);
+                    ch = fscanf(fp,"%s",word);
+                    celldx = atoi(word) + celldx;
+                    for(unsigned int i=cellnt;i<cellnt+celln;i++)
+                    {
+                        ch = fscanf(fp,"%s",word);
+                        if(strcmp(word, "3")==0)//triangle
+                        {
+                            cells[0][i] = 3;
+                            ch = fscanf(fp, "%s", word);
+                            cells[1][i] = atof(word) + nt;
+                            ch = fscanf(fp, "%s", word);
+                            cells[2][i] = atof(word) + nt;
+                            ch = fscanf(fp, "%s", word);
+                            cells[3][i] = atof(word) + nt;
+                        }
+                        else if(strcmp(word, "2")==0)//line
+                        {
+                            cells[0][i] = 2;
+                            ch = fscanf(fp, "%s", word);
+                            cells[1][i] = atof(word) + nt;
+                            ch = fscanf(fp, "%s", word);
+                            cells[2][i] = atof(word) + nt;
+                        }
+                    }
+                    cellnt = cellnt + celln;
+                    nt = nt + n;//set nt
                 }
-              }
-              cellnt = cellnt + celln;
-              nt = nt + n;//set nt
-            }
-          } while (ch != EOF);
-          fclose(fp);
+            } while (ch != EOF);
+            fclose(fp);
         }
         
         // WRITE OUTPUT
         //
-        char iter[100];
+        char iter[15];
         sprintf(iter, "%i.vtk", ii);
-        char filename[500] = "output/mergedmpi/output"; //care or buffer overflow
+        char filename[50] = "output/mergedmpi/output"; //care or buffer overflow
         strcat(filename, iter);
-        //printf("%s\n", filename);
+        printf("%s\n", filename);
         
         FILE *out = fopen(filename, "w+");
         
@@ -200,35 +201,44 @@ void postProcessing(int nranks, unsigned int size, unsigned int timesteps)
         
         for(unsigned int i = 0; i < nt; i++)
         {
-          fprintf(out,"%.5f %.5f %.5f\n", point[0][i], point[1][i], point[2][i]);
+            fprintf(out,"%.5f %.5f %.5f\n", point[0][i], point[1][i], point[2][i]);
         }
         
         fprintf(out,"\nCELLS %i %i\n", cellnt, celldx);
         for(unsigned int i = 0; i < cellnt; i++)
         {
-          if(cells[0][i] == 3)
-          {
-            fprintf(out,"%i %i %i %i\n", cells[0][i], cells[1][i], cells[2][i], cells[3][i]);
-          }
-          else if(cells[0][i] == 2)
-          {
-            fprintf(out,"%i %i %i\n", cells[0][i], cells[1][i], cells[2][i]);
-          }
+            if(cells[0][i] == 3)
+            {
+                fprintf(out,"%i %i %i %i\n", cells[0][i], cells[1][i], cells[2][i], cells[3][i]);
+            }
+            else if(cells[0][i] == 2)
+            {
+                fprintf(out,"%i %i %i\n", cells[0][i], cells[1][i], cells[2][i]);
+            }
         }
         
         fprintf(out, "\nCELL_TYPES %i\n", cellnt);
         for(unsigned int i = 0; i < cellnt; i++)
         {
-          if(cells[0][i] == 3)
-          {
-            fprintf(out, "%i\n", 5);
-          }
-          else if (cells[0][i] == 2)
-          {
-            fprintf(out, "%i\n", 3);
-          }
+            if(cells[0][i] == 3)
+            {
+                fprintf(out, "%i\n", 5);
+            }
+            else if (cells[0][i] == 2)
+            {
+                fprintf(out, "%i\n", 3);
+            }
         }
         fclose(out);
     }
+    
+    free(point[0]);
+    free(point[1]);
+    free(point[2]);
+    
+    free(cells[0]);
+    free(cells[1]);
+    free(cells[2]);
+    free(cells[3]);
+    free(cells[4]);
 }
-

@@ -1,19 +1,43 @@
 #include "input.h" 
 
-
-/*
-void resize_enviroment()
+void translate_enviroment(unsigned int tid, iREAL *t[3][3], iREAL p[3])
 {
+  t[0][0][tid] = t[0][0][tid] + p[0];
+  t[0][1][tid] = t[0][1][tid] + p[1];
+  t[0][2][tid] = t[0][2][tid] + p[2];
 
+  t[1][0][tid] = t[1][0][tid] + p[0];
+  t[1][1][tid] = t[1][1][tid] + p[1];
+  t[1][2][tid] = t[1][2][tid] + p[2];
+
+  t[2][0][tid] = t[2][0][tid] + p[0];
+  t[2][1][tid] = t[2][1][tid] + p[1];
+  t[2][2][tid] = t[2][2][tid] + p[2];
 }
 
-void translate_enviroment()
+void condition_enviroment(unsigned int nt, unsigned int nParticles, iREAL *v[3], unsigned int pid[])
 {
-  
+  unsigned int counter=0;
+  for(int j = 0; j < nParticles; j++)
+  {
+    iREAL rand = drand48();//random pull velocity
+    for(unsigned int i = counter; i < nt; i++)
+    {
+      if(pid[i] == j)
+      {
+        v[0][i] = 250 * rand;
+        v[1][i] = 0;
+        v[2][i] = 0;
+        counter++;
+      } else
+      {
+        break;
+      }
+    }
+  }
 }
-*/
 
-void init_enviroment(unsigned int *nt, unsigned int *nParticles, iREAL *t[3][3], iREAL *v[3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
+void init_enviroment(unsigned int *nt, unsigned int *nParticles, iREAL *t[3][3], iREAL *v[3], unsigned int tid[], unsigned int pid[], iREAL lo[3], iREAL hi[3])
 {
   //Input Type
   //0: Triangulated Mesh
@@ -22,22 +46,61 @@ void init_enviroment(unsigned int *nt, unsigned int *nParticles, iREAL *t[3][3],
   //3: Sphere
   //4: Square
   //5: Hexahedron
-
-  *nParticles = 200;
+  
+  *nParticles = 1000;
   int ptype[*nParticles];
   for(int i = 0; i < *nParticles; i++)
   {
     ptype[i] = 1;
   }
   
-  load_enviroment(ptype, nt, *nParticles, t, tid, pid, mint, maxt);
+  iREAL mint, maxt;
+  load_enviroment(ptype, nt, *nParticles, t, tid, pid, &mint, &maxt);
   printf("ntinit:%i\n",*nt); 
   iREAL velo[3] = {50, 50, 50};
-  iREAL lo[3] = {-255, -255, -255}; /* lower corner */
-  iREAL hi[3] = {255, 255, 255}; /* upper corner */
+  lo[0] = -250; /* lower corner */
+  lo[1] = -250; /* lower corner */
+  lo[2] = -250; /* lower corner */
   
-  gen_velocities(lo, velo, *nt, v);
+  hi[0] = 250; /* upper corner */
+  hi[1] = 250; /* upper corner */
+  hi[2] = 250; /* upper corner */
+  
+  //gen_velocities(lo, velo, *nt, v);
+  
+  iREAL p[3];//position to be translated
+  int radius = 10;
+
+  int counter = 0;
+  int idx = 0;
+  for(int ii = lo[0]; ii < hi[0]; ii=ii+radius)
+  {
+    for(int jj = lo[1]; jj < hi[1]; jj=jj+radius)
+    {
+      for(int kk = lo[2]; kk < hi[2]; kk=kk+radius)
+      {
+        if(idx < *nParticles)
+        {
+          //computer position to translate
+          for(int j = counter; j < *nt; j++)
+          {
+            if(pid[j] == idx)
+            {
+              p[0] = ii+(radius/2);
+              p[1] = jj+(radius/2);
+              p[2] = kk+(radius/2);
+              translate_enviroment(j, t, p);
+              counter++;
+            }
+          }
+          idx++;
+        }
+      }
+    }
+  }
+  condition_enviroment(*nt, *nParticles, v, pid);
 }
+
 
 void load_enviroment(int ptype[], unsigned int *nt, unsigned int nParticles, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
 {
@@ -202,6 +265,7 @@ void load_points(int ptype, unsigned int *nt, unsigned int bodyID, unsigned int 
   } while (ch != EOF);
   *mint = min;
   *maxt = max;
+  fclose(fp1);
 }
 
 void normalize(unsigned int nt, iREAL *t[3][3], iREAL mint, iREAL maxt) 

@@ -23,11 +23,10 @@ int main (int argc, char **argv)
   unsigned int nt = 0; /* number of triangles */
   unsigned int *pid; /*particle identifier */
   unsigned int *tid; /* triangle identifiers */
-  iREAL lo[3] = {-255, -255, -255}; /* lower corner */
-  iREAL hi[3] = {255, 255, 255}; /* upper corner */
+  iREAL lo[3] = {-500, -500, -500}; /* lower corner */
+  iREAL hi[3] = {500, 500, 500}; /* upper corner */
   
-  unsigned int nParticles = 16;
-  unsigned int size = 20000000; /* memory buffer size */
+  unsigned int size = 27000000; /* memory buffer size */
   int nprocs, myrank;
 
   /* init */ 
@@ -38,7 +37,6 @@ int main (int argc, char **argv)
    
   if (myrank == 0)
   {
-    size = 20000000;
     for (int i = 0; i < 3; i ++)
     { 
       t[0][i] = (iREAL *) malloc (size*sizeof(iREAL));
@@ -55,41 +53,12 @@ int main (int argc, char **argv)
     
     for(unsigned int i=0;i<size;i++) tid[i] = UINT_MAX; 
     
-    iREAL mint, maxt;
-    
-    //Input Type
-    //0: Triangulated Mesh
-    //1: Triangle
-    //2: Sphere
-    //3: Square
-    //4: Hexahedron
-  
-    int ptype[nParticles];
-    ptype[0] = 0;
-    ptype[1] = 0;
-    ptype[2] = 0;
-    ptype[3] = 0;
-    ptype[4] = 0;
-    ptype[5] = 0;
-    ptype[6] = 0;
-    ptype[7] = 0;
-    ptype[8] = 0;
-    ptype[9] = 0;
-    ptype[10] = 0;
-    ptype[11] = 0;
-    ptype[12] = 0;
-    ptype[13] = 0;
-    ptype[14] = 0;
-    ptype[15] = 0;
-    
-    load_enviroment(ptype, &nt, nParticles, t, tid, pid, &mint, &maxt);
-    
-    iREAL velo[3] = {50, 50, 50};
-    gen_velocities(lo, velo, nt, v);
+    unsigned int nparticles;
+    init_enviroment(&nt, &nparticles, t, v, tid, pid, lo, hi);  
+    printf("NT:%i\n", nt);
   }
   else
   {
-    size = 20000000;
     for (int i = 0; i < 3; i ++)
     {
       t[0][i] = (iREAL *) malloc (size*sizeof(iREAL));
@@ -132,6 +101,7 @@ int main (int argc, char **argv)
   
   //for (time = 0.0; time < 1.0; time += step)
   for(time = 0; time < 0.1; time+=step)
+  //for(time = 0; time < 1; time++)
   {
     if(myrank == 0){printf("TIMESTEP: %i\n", timesteps);}
     
@@ -160,7 +130,7 @@ int main (int argc, char **argv)
     timer3 = 0.0;
     
     timerstart (&tdataExchange[timesteps]);
-    loba_migrateGhosts(lb, myrank, size, &nt, t, v, p, q, distance, tid, pid, &timer1, &timer2, &timer3);
+    loba_migrateGhosts(lb, myrank, &nt, t, v, p, q, distance, tid, pid, &timer1, &timer2, &timer3);
     timerend (&tdataExchange[timesteps]);
    
     tTimer1[timesteps] = timer1;
@@ -175,7 +145,7 @@ int main (int argc, char **argv)
     
     printf("RANK[%i]: integration:%f\n", myrank, tintegration[timesteps].total);
 
-    //output_state(lb, myrank, nt, t, v, timesteps);
+//    output_state(lb, myrank, nt, t, v, timesteps);
     
     timesteps++;
   }
@@ -306,8 +276,6 @@ int main (int argc, char **argv)
     printf("TOTALmin: %f, TOTALmax: %f, TOTALavg: %f\nZ-BALmin: %f, Z-BALmax: %f, Z-BALavg: %f\nMIGRATIONmin: %f, MIGRATIONmax: %f, MIGRATIONavg: %f\nDTXmin: %f, DTXmax: %f, DTXavg: %f\nDT1min: %f, DT1max: %f, DT1avg: %f\nDT2min: %f, DT2max: %f, DT2avg: %f\nDT3min: %f, DT3max: %f, DT3avg: %f\n", minsubtotal, maxsubtotal, avgsubtotal, minbal, maxbal, avgbal, minmig, maxmig, avgmig, minde, maxde, avgde, mindt1, maxdt1, avgdt1, mindt2, maxdt2, avgdt2, mindt3, maxdt3, avgdt3); 
   }
 
-  //printf("RANK[%i]: TOTAL:%f Z-BALANCE:%f, MIGRATION:%f, DATAXCHANGE:%f, DT1:%f, DT2:%f, DT3:%f, INTEGRATION:%f\n", myrank, subtotal, bal, mig, de, dt1, dt2, dt3, in);
-  //printf("RANK[%i]: FIRST MIGRATION:%f\n", myrank, tmigration[0].total);
   MPI_Barrier(MPI_COMM_WORLD);
   if(myrank == 0)//have to make sure all ranks finished
   {

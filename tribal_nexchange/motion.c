@@ -47,3 +47,8 @@ void integrate (iREAL step, iREAL lo[3], iREAL hi[3], unsigned int nt, iREAL * t
         if (t[2][2][i] > hi[2]) v[2][i] *= -1;
     }
 }
+
+//id: body/particle id,  
+void translate(unsigned int id)
+{
+}
