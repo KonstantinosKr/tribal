@@ -100,7 +100,7 @@ int main (int argc, char **argv)
   timer3 = 0.0;
   
   //for (time = 0.0; time < 1.0; time += step)
-  for(time = 0; time < 0.1; time+=step)
+  for(time = 0; time < 1; time+=step)
   //for(time = 0; time < 1; time++)
   {
     if(myrank == 0){printf("TIMESTEP: %i\n", timesteps);}
