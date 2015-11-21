@@ -85,14 +85,14 @@ int main (int argc, char **argv)
   /* perform time stepping */
   iREAL step = 1E-3, time; unsigned int timesteps=0;
   
-  TIMING tbalance[100];
-  TIMING tmigration[100];
-  TIMING tdataExchange[100];
-  TIMING tintegration[100];
-  iREAL tTimer1[100];
-  iREAL tTimer2[100];
-  iREAL tTimer3[100];
-  iREAL tTimer4[100];
+  TIMING tbalance[1000];
+  TIMING tmigration[1000];
+  TIMING tdataExchange[1000];
+  TIMING tintegration[1000];
+  iREAL tTimer1[1000];
+  iREAL tTimer2[1000];
+  iREAL tTimer3[1000];
+  iREAL tTimer4[1000];
 
   iREAL timer1, timer2, timer3;
   timer1 = 0.0;
@@ -130,7 +130,7 @@ int main (int argc, char **argv)
     timer3 = 0.0;
     
     timerstart (&tdataExchange[timesteps]);
-    loba_migrateGhosts(lb, myrank, &nt, t, v, p, q, distance, tid, pid, &timer1, &timer2, &timer3);
+   // loba_migrateGhosts(lb, myrank, &nt, t, v, p, q, distance, tid, pid, &timer1, &timer2, &timer3);
     timerend (&tdataExchange[timesteps]);
    
     tTimer1[timesteps] = timer1;

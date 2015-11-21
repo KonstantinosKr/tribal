@@ -52,7 +52,6 @@ int main()
           {
             ch = fscanf(fp,"%s",word);//n points
             n = atoi(word);//n points saved
-            nt = n; 
             ch = fscanf(fp,"%s",word);//float or double read
             
             //loop through points

@@ -362,7 +362,6 @@ void loba_migrateGhosts(struct loba *lb, int  myrank, unsigned int *nt, iREAL *t
       pivot[i] = *nt;
       MPI_Isend(&pivot[i], 1, MPI_INT, proc, 1, MPI_COMM_WORLD, &myRequest[i*15]);
     }
-    printf("hello\n");
 
     for(int i=0; i<nNeighbors; i++)
     {
