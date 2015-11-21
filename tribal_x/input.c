@@ -114,6 +114,7 @@ void load_enviroment(int ptype[], unsigned int *nt, unsigned int nParticles, iRE
 {
   unsigned int n = 0;
   *nt = 0;
+  srand48(time(NULL));
   for(unsigned int i = 0; i < nParticles; i++)
   {
     if(ptype[i] != 6)
@@ -133,22 +134,19 @@ void load_enviroment(int ptype[], unsigned int *nt, unsigned int nParticles, iRE
 
 void gen_nonsphericalparticle(iREAL eps, iREAL radius, int pointsize, unsigned int *nt, unsigned int bodyidx, unsigned int initidx, iREAL *t[3][3], unsigned int tid[], unsigned int pid[], iREAL *mint, iREAL *maxt)
 {
-    srand48(time(NULL));
-    iREAL v[100][3];
-    for(int i = 0; i<pointsize; i++)
-    {
-        double rng1 = 0;
-        double rng2 = 360;
-        double phi = (rng2-rng1) * (drand48()) + rng1;
-        double theta = (rng2-rng1) * (drand48()) + rng1;
-        double myradius = ((drand48()*eps)+1.0-eps) * radius;
+  iREAL v[100][3];
+  for(int i = 0; i<pointsize; i++)
+  {
+    iREAL rng1 = 0;
+    iREAL rng2 = 360;
+    iREAL phi = (rng2-rng1) * (drand48()) + rng1;
+    iREAL theta = (rng2-rng1) * (drand48()) + rng1;
+    iREAL myradius = ((drand48()*eps)+1.0-eps) * radius;
             
-        v[i][0] = myradius*sin(phi) * cos(theta);
-        v[i][1] = myradius*sin(phi) * sin(theta);
-        v[i][2] = myradius*cos(phi);
-            
-        printf("P[0]: %f, P[1]: %f, P[2]: %f\n", v[i][0], v[i][1], v[i][2]);
-    }
+    v[i][0] = myradius*sin(phi) * cos(theta);
+    v[i][1] = myradius*sin(phi) * sin(theta);
+    v[i][2] = myradius*cos(phi);
+  }
     
     TRI* tr = NULL;
     free(tr);int pointlength = 0;
